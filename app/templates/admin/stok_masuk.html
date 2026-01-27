@@ -1,0 +1,238 @@
+{% extends 'base_internal.html' %}
+
+{% block title %}Stok Masuk | DOMBA{% endblock %}
+{% block header_title %}Input Stok Blangko{% endblock %}
+
+{% block styles %}
+<style>
+/* Hide number input spinner arrows */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Form Input Section -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 sticky top-24">
+            <div class="bg-gradient-to-r from-blue-700 to-blue-600 px-6 py-8 text-white">
+                <div class="flex items-center space-x-4 mb-4">
+                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Terima Stok</h3>
+                        <p class="text-white/70 text-sm">Input data blangko baru</p>
+                    </div>
+                </div>
+            </div>
+            
+            <form action="{{ url_for('admin.stok_masuk') }}" method="POST" class="p-6 space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <!-- Tanggal Terima (Informasi saja) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tanggal Penerimaan</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="date" name="tanggal" value="{{ today_date }}" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700">
+                    </div>
+                </div>
+
+                <!-- Sumber -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sumber Pengadaan</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-building absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <select name="sumber" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700 appearance-none">
+                            <option value="Pusat (Kemendagri)">Pusat (Kemendagri)</option>
+                            <option value="Hibah Provinsi">Hibah Provinsi</option>
+                            <option value="Pinjaman Antar Daerah">Pinjaman Antar Daerah</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Jumlah -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Jumlah Blangko (Keping)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="number" name="jumlah" required min="1" placeholder="Contoh: 2000" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-black text-slate-800 text-lg">
+                    </div>
+                </div>
+
+                <!-- Keterangan -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Keterangan Tambahan</label>
+                    <textarea name="keterangan" rows="3" placeholder="Sebutkan nomor berita acara atau detail pengiriman..." class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all text-sm"></textarea>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-700 transition-all transform hover:-translate-y-1 flex items-center justify-center">
+                        <i class="fa-solid fa-save mr-2"></i> Simpan Data Stok
+                    </button>
+                    <p class="text-[0.65rem] text-slate-400 text-center mt-4">Pastikan data yang diinput sesuai dengan Berita Acara Serah Terima (BAST).</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- History Table Section -->
+    <div class="lg:col-span-2">
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 h-full">
+            <div class="p-8 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xl font-bold text-slate-800">Riwayat Pengadaan</h3>
+                    <p class="text-slate-500 text-sm">Log penerimaan blangko KTP-el ke Dinas.</p>
+                </div>
+                <a href="{{ url_for('admin.export_stok_masuk') }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Export Riwayat Pengadaan">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="px-8 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="0">Waktu Input <i class="fa-solid fa-sort ml-1"></i></th>
+                            <th class="px-8 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="1">Sumber <i class="fa-solid fa-sort ml-1"></i></th>
+                            <th class="px-8 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest text-right sortable" data-column="2">Jumlah <i class="fa-solid fa-sort ml-1"></i></th>
+                            <th class="px-8 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest text-center sortable" data-column="3">Petugas <i class="fa-solid fa-sort ml-1"></i></th>
+                            <th class="px-8 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for log in recent_masuk %}
+                        <tr class="hover:bg-blue-50/30 transition-colors">
+                            <td class="px-8 py-6">
+                                <p class="text-sm font-bold text-slate-800">{{ log.created_at.strftime('%d %b %Y') }}</p>
+                                <p class="text-[0.65rem] text-slate-500 font-medium tracking-tighter uppercase italic">{{ log.created_at.strftime('%H:%M') }} WIB</p>
+                            </td>
+                            <td class="px-8 py-6">
+                                <span class="px-3 py-1 bg-slate-100 text-slate-600 text-[0.7rem] font-bold rounded-lg uppercase">Penerimaan</span>
+                            </td>
+                            <td class="px-8 py-6 text-right">
+                                <span class="text-lg font-black text-blue-600">+{{ "{:,}".format(log.jumlah_ktp).replace(',', '.') }}</span>
+                                <span class="text-[0.6rem] text-slate-400 font-bold ml-1 uppercase">Keping</span>
+                            </td>
+                            <td class="px-8 py-6">
+                                <div class="flex items-center justify-center">
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[0.7rem] text-blue-600 font-bold border-2 border-white shadow-sm ring-1 ring-blue-100">{{ log.user.username[:2] | upper }}</div>
+                                    <span class="ml-2 text-xs font-semibold text-slate-700 hidden sm:inline">{{ log.user.username }}</span>
+                                </div>
+                            </td>
+                            <td class="px-8 py-6 text-center">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <button data-id="{{ log.id }}" data-time="{{ log.created_at.strftime('%d %b %Y %H:%M') }}" data-sumber="Penerimaan" data-jumlah="{{ log.jumlah_ktp }}" data-user="{{ log.user.username }}" data-keterangan="{{ log.keterangan or '' }}" onclick="openViewModal(this)" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors" title="View">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button data-id="{{ log.id }}" data-jumlah="{{ log.jumlah_ktp }}" data-tanggal="{{ log.created_at.strftime('%Y-%m-%d') }}" data-keterangan="{{ log.keterangan or '' }}" onclick="openEditModal(this)" class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors" title="Edit">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                    <form action="{{ url_for('admin.delete_stok_masuk', transaksi_id=log.id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus transaksi ini?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-100 transition-colors" title="Hapus">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="px-8 py-10 text-center text-slate-400 font-medium italic">Belum ada data pengadaan.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if not range(1, 4) %}
+            <div class="py-20 text-center">
+                <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 text-4xl mx-auto mb-4">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <p class="text-slate-400 font-medium">Belum ada data pengadaan blangko.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-slate-800 mb-6">Edit Transaksi</h3>
+        <form action="{{ url_for('admin.edit_stok_masuk') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="transaksi_id" id="edit_transaksi_id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Jumlah</label>
+                <input type="number" name="jumlah" id="edit_jumlah" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required min="1">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Tanggal</label>
+                <input type="date" name="tanggal" id="edit_tanggal" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Keterangan Tambahan</label>
+                <textarea name="keterangan" id="edit_keterangan" rows="3" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" placeholder="Sebutkan nomor berita acara atau detail pengiriman..."></textarea>
+            </div>
+            <div class="flex space-x-4">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold hover:bg-blue-700 transition-colors">Simpan</button>
+                <button type="button" onclick="closeEditModal()" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-colors">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div id="viewModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-slate-800 mb-6">Detail Transaksi</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">ID Transaksi</label>
+                <p class="text-sm font-black text-slate-700" id="viewTransaksiId"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Waktu Input</label>
+                <p class="text-sm font-black text-slate-700" id="viewWaktuInput"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Sumber</label>
+                <p class="text-sm font-black text-slate-700" id="viewSumber"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Jumlah</label>
+                <p class="text-sm font-black text-slate-700" id="viewJumlah"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Petugas</label>
+                <p class="text-sm font-black text-slate-700" id="viewPetugas"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Keterangan Tambahan</label>
+                <p class="text-sm font-black text-slate-700" id="viewKeterangan"></p>
+            </div>
+        </div>
+        <div class="flex space-x-4 mt-6">
+            <button type="button" onclick="closeViewModal()" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-colors">Tutup</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/internal/admin_stok_masuk.js') }}"></script>
+{% endblock %}

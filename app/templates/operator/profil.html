@@ -1,0 +1,181 @@
+{% extends 'base_internal.html' %}
+
+{% block title %}Profil Saya | DOMBA{% endblock %}
+{% block header_title %}Profil Saya{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/internal/profil.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+    <div class="px-8 py-6 border-b border-slate-50">
+        <h3 class="text-xl font-black text-slate-800 tracking-tight">Pengaturan Profil</h3>
+        <p class="text-slate-400 text-sm font-medium">Kelola informasi akun dan keamanan Anda.</p>
+    </div>
+
+    <div class="p-8 space-y-8">
+        <!-- Informasi Akun -->
+        <div class="bg-slate-50/50 rounded-2xl p-6 border border-slate-100">
+            <h4 class="text-lg font-black text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-user-circle mr-3 text-indigo-500"></i>
+                Informasi Akun
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Username</label>
+                    <div class="flex items-center">
+                        <input type="text" value="{{ current_user.username }}" readonly
+                               class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 font-mono text-sm cursor-not-allowed">
+                        <i class="fa-solid fa-lock ml-3 text-slate-400" title="Username tidak dapat diubah"></i>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Username tidak dapat diubah untuk keamanan sistem</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Role</label>
+                    <input type="text" value="{{ 'Operator' if current_user.role == 'operator_kecamatan' else 'Admin' }}" readonly
+                           class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 font-semibold cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Kecamatan</label>
+                    <input type="text" value="{{ current_user.kecamatan.nama_kecamatan }}" readonly
+                           class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 cursor-not-allowed">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Terakhir Login</label>
+                    <input type="text" value="{{ current_user.last_login.strftime('%d/%m/%Y %H:%M') if current_user.last_login else 'Belum pernah login' }}" readonly
+                           class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 cursor-not-allowed">
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Update Profil -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200">
+            <h4 class="text-lg font-black text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-user-edit mr-3 text-blue-500"></i>
+                Update Profil
+            </h4>
+
+            <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="update_profile">
+
+                <div>
+                    <label for="nama_lengkap" class="block text-sm font-bold text-slate-600 mb-2">
+                        Nama Lengkap <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="nama_lengkap" name="nama_lengkap"
+                           value="{{ current_user.nama_lengkap }}"
+                           data-original-value="{{ current_user.nama_lengkap }}"
+                           placeholder="Masukkan nama lengkap"
+                           class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm uppercase"
+                           required>
+                    <p class="text-xs text-slate-500 mt-1">Gunakan nama lengkap sesuai KTP-el.</p>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold">
+                        <i class="fa-solid fa-save mr-2"></i>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Form Ubah Password -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-200">
+            <h4 class="text-lg font-black text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-key mr-3 text-green-500"></i>
+                Ubah Password
+            </h4>
+
+            <form method="POST" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="change_password">
+
+                <div>
+                    <label for="current_password" class="block text-sm font-bold text-slate-600 mb-2">
+                        Password Saat Ini <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="current_password" name="current_password"
+                               placeholder="Masukkan password saat ini"
+                               class="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-sm"
+                               required>
+                        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                data-target="current_password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="new_password" class="block text-sm font-bold text-slate-600 mb-2">
+                        Password Baru <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="new_password" name="new_password"
+                               placeholder="Masukkan password baru"
+                               class="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-sm"
+                               required>
+                        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                data-target="new_password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Password Strength Meter -->
+                    <div class="mt-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-medium text-slate-600">Kekuatan Password:</span>
+                            <span id="password-strength-text" class="text-xs font-bold text-slate-400">Belum ada</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div id="password-strength-bar" class="h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-[0.6rem] text-slate-400">Lemah</span>
+                            <span class="text-[0.6rem] text-slate-400">Sedang</span>
+                            <span class="text-[0.6rem] text-slate-400">Kuat</span>
+                            <span class="text-[0.6rem] text-slate-400">Sangat Kuat</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-xs text-slate-500 mt-1">Minimal 6 karakter</p>
+                </div>
+
+                <div>
+                    <label for="confirm_password" class="block text-sm font-bold text-slate-600 mb-2">
+                        Konfirmasi Password Baru <span class="text-red-500">*</span>
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="confirm_password" name="confirm_password"
+                               placeholder="Konfirmasi password baru"
+                               class="w-full px-4 py-3 pr-12 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all text-sm"
+                               required>
+                        <button type="button" class="toggle-password absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                data-target="confirm_password">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="px-6 py-3 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-bold">
+                        <i class="fa-solid fa-key mr-2"></i>
+                        Ubah Password
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/internal/profil.js') }}"></script>
+{% endblock %}

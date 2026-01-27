@@ -1,0 +1,305 @@
+{% extends "base_internal.html" %}
+
+{% block title %}Admin Overview | DOMBA{% endblock %}
+{% block header_title %}Dashboard Ringkasan{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/internal/admin_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Highlight Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- Card 1: Global Stock -->
+        <div class="bg-white p-7 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+                <div>
+                    <h4 class="text-3xl font-black text-slate-800 tracking-tight">{{ "{:,}".format(total_stok_ktp).replace(',', '.') }}</h4>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Total Stok Global</p>
+                </div>
+            </div>
+            <div class="absolute -right-4 -bottom-4 text-slate-50 text-8xl group-hover:text-blue-50/50 transition-colors duration-500 -rotate-12">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+        </div>
+
+        <!-- Card 2: Active Points -->
+        <div class="bg-white p-7 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-500">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <h4 class="text-3xl font-black text-slate-800 tracking-tight">{{ total_kecamatan }}</h4>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Titik Layanan</p>
+                </div>
+            </div>
+            <div class="absolute -right-4 -bottom-4 text-slate-50 text-8xl group-hover:text-indigo-50/50 transition-colors duration-500 -rotate-12">
+                <i class="fa-solid fa-map-marked-alt"></i>
+            </div>
+        </div>
+
+        <!-- Card 3: Users -->
+        <div class="bg-white p-7 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-500">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div>
+                    <h4 class="text-3xl font-black text-slate-800 tracking-tight">{{ total_users }}</h4>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Operator Aktif</p>
+                </div>
+            </div>
+            <div class="absolute -right-4 -bottom-4 text-slate-50 text-8xl group-hover:text-emerald-50/50 transition-colors duration-500 -rotate-12">
+                <i class="fa-solid fa-users-cog"></i>
+            </div>
+        </div>
+
+        <!-- Card 4: Real-time Clock -->
+        <div class="bg-white p-7 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
+            <div class="relative z-10 flex flex-col h-full justify-between">
+                <div class="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-xl mb-4 group-hover:bg-purple-600 group-hover:text-white transition-all duration-500">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold text-slate-800 leading-snug">Data Stok Real-time</h4>
+                    <div class="mt-2">
+                        <span id="currentTime" class="text-lg font-bold text-slate-700 tracking-tighter">--/--/----<br>Pukul --:-- WIB</span>
+                    </div>
+                </div>
+            </div>
+            <div class="absolute -right-4 -bottom-4 text-slate-50 text-8xl group-hover:text-purple-50/50 transition-colors duration-500 -rotate-12">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Grid Content -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <!-- Stock Distribution Table -->
+        <div class="xl:col-span-2 bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <div class="px-8 py-10 border-b border-slate-50 flex items-center justify-between">
+                <div>
+                    <h3 class="text-2xl font-black text-slate-800 tracking-tight mb-1">Penyebaran Blangko</h3>
+                    <p class="text-slate-400 text-sm font-medium">Monitoring stok ditiap kecamatan.</p>
+                </div>
+                <div class="flex space-x-2">
+                    <!-- Per Page Selector -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-slate-500 font-medium">Tampilkan:</span>
+                        <select id="perPageSelect" class="px-3 py-1.5 bg-slate-50 text-slate-700 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="10" {% if pagination_info and pagination_info.per_page == 10 %}selected{% endif %}>10</option>
+                            <option value="20" {% if pagination_info and pagination_info.per_page == 20 %}selected{% endif %}>20</option>
+                            <option value="0" {% if not pagination_info or pagination_info.per_page == 0 %}selected{% endif %}>Semua</option>
+                        </select>
+                    </div>
+                    <a href="{{ url_for('admin.export_sebaran_stok') }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Export to Excel">
+                        <i class="fa-solid fa-download"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-slate-50/50">
+                            <th class="px-8 py-5 text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">
+                                <button class="sortable-header flex items-center space-x-1 hover:text-slate-600 transition-colors" data-column="nama_kecamatan">
+                                    <span>Wilayah / Kecamatan</span>
+                                    <div class="sort-icons flex flex-col">
+                                        <i class="fa-solid fa-chevron-up text-[0.5rem] opacity-30 sort-asc"></i>
+                                        <i class="fa-solid fa-chevron-down text-[0.5rem] opacity-30 sort-desc"></i>
+                                    </div>
+                                </button>
+                            </th>
+                            <th class="px-8 py-5 text-center text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">
+                                <button class="sortable-header flex items-center justify-center space-x-1 hover:text-slate-600 transition-colors" data-column="jumlah_ktp">
+                                    <span>Sisa Stok</span>
+                                    <div class="sort-icons flex flex-col">
+                                        <i class="fa-solid fa-chevron-up text-[0.5rem] opacity-30 sort-asc"></i>
+                                        <i class="fa-solid fa-chevron-down text-[0.5rem] opacity-30 sort-desc"></i>
+                                    </div>
+                                </button>
+                            </th>
+                            <th class="px-8 py-5 text-right text-[0.65rem] font-bold text-slate-400 uppercase tracking-widest">Kondisi</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-50">
+                        {% for kecamatan, ktp, kia, updated in stock_data %}
+                        <tr class="hover:bg-blue-50/30 transition-all group">
+                            <td class="px-8 py-6">
+                                <div class="flex items-center space-x-4">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                        {{ kecamatan[:2] | upper }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-bold text-slate-800">{{ kecamatan }}</p>
+                                        <p class="text-[0.65rem] text-slate-400 italic">Kabupaten Garut</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-8 py-6 text-center">
+                                <span class="text-xl font-black text-slate-800">{{ "{:,}".format(ktp).replace(',', '.') }}</span>
+                                <span class="text-[0.6rem] font-bold text-slate-400 uppercase ml-1">Keping</span>
+                            </td>
+                            <td class="px-8 py-6 text-right">
+                                {% if ktp == 0 %}
+                                <span class="px-3 py-1.5 bg-rose-50 text-rose-600 text-[0.65rem] font-black rounded-lg uppercase tracking-tight border border-rose-100">
+                                    Habis
+                                </span>
+                                {% elif ktp <= 20 %}
+                                <span class="px-3 py-1.5 bg-amber-50 text-amber-600 text-[0.65rem] font-black rounded-lg uppercase tracking-tight border border-amber-100">
+                                    Terbatas
+                                </span>
+                                {% else %}
+                                <span class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-[0.65rem] font-black rounded-lg uppercase tracking-tight border border-emerald-100">
+                                    Tersedia
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination Controls -->
+            {% if pagination_info %}
+            <div id="pagination-controls" class="px-8 py-6 border-t border-slate-50 bg-slate-50/30">
+                <div class="flex items-center justify-between">
+                    <div class="text-sm text-slate-600">
+                        Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} kecamatan
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        {% if pagination_info.has_prev %}
+                        <a href="{{ url_for('admin.dashboard', page=pagination_info.prev_page, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
+                            <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+                        </a>
+                        {% endif %}
+                        
+                        {% set start_page = 1 if pagination_info.page - 2 < 1 else pagination_info.page - 2 %}
+                        {% set end_page = pagination_info.total_pages if pagination_info.page + 2 > pagination_info.total_pages else pagination_info.page + 2 %}
+                        
+                        {% if start_page > 1 %}
+                        <a href="{{ url_for('admin.dashboard', page=1, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">1</a>
+                        {% if start_page > 2 %}
+                        <span class="px-2 py-2 text-slate-400">...</span>
+                        {% endif %}
+                        {% endif %}
+                        
+                        {% for page_num in range(start_page, end_page + 1) %}
+                        <a href="{{ url_for('admin.dashboard', page=page_num, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
+                           class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors
+                           {% if page_num == pagination_info.page %}
+                           bg-blue-600 text-white border-blue-600
+                           {% else %}
+                           bg-white text-slate-600 border-slate-200 hover:bg-slate-50
+                           {% endif %}">
+                           {{ page_num }}
+                        </a>
+                        {% endfor %}
+                        
+                        {% if end_page < pagination_info.total_pages %}
+                        {% if end_page < pagination_info.total_pages - 1 %}
+                        <span class="px-2 py-2 text-slate-400">...</span>
+                        {% endif %}
+                        <a href="{{ url_for('admin.dashboard', page=pagination_info.total_pages, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">{{ pagination_info.total_pages }}</a>
+                        {% endif %}
+                        
+                        {% if pagination_info.has_next %}
+                        <a href="{{ url_for('admin.dashboard', page=pagination_info.next_page, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
+                            Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Logs Section -->
+        <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden flex flex-col">
+            <div class="p-8 border-b border-slate-50">
+                <h3 class="text-xl font-black text-slate-800 tracking-tight">Timeline Transaksi</h3>
+                <p class="text-slate-400 text-sm font-medium">Log aktivitas blangko harian.</p>
+            </div>
+            <div class="flex-1 p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[600px]">
+                {% for transaction in recent_transactions %}
+                <div class="relative pl-8 before:content-[''] before:absolute before:left-0 before:top-2 before:bottom-[-2rem] before:w-[2px] before:bg-slate-100 last:before:hidden">
+                    <div class="absolute left-[-5px] top-2 w-3 h-3 rounded-full border-2 border-white 
+                        {% if transaction.jenis_transaksi == 'IN_FROM_PUSAT' %}bg-emerald-500
+                        {% elif transaction.jenis_transaksi == 'DISTRIBUSI_TO_KEC' %}bg-blue-500
+                        {% elif transaction.jenis_transaksi == 'RUSAK' %}bg-rose-500
+                        {% else %}bg-slate-300{% endif %}">
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <h5 class="text-sm font-black text-slate-800">
+                                {% if transaction.jenis_transaksi == 'IN_FROM_PUSAT' %}Stok Masuk
+                                {% elif transaction.jenis_transaksi == 'DISTRIBUSI_TO_KEC' %}Distribusi
+                                {% elif transaction.jenis_transaksi == 'RUSAK' %}Blanko Rusak
+                                {% else %}Penyesuaian{% endif %}
+                            </h5>
+                            <span class="text-[0.6rem] font-bold text-slate-300 uppercase italic">{{ transaction.created_at.strftime('%H:%M') }}</span>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-500">{{ transaction.kecamatan.nama_kecamatan }}</p>
+                        <div class="flex items-center space-x-2 mt-2">
+                            <span class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[0.6rem] font-black uppercase">{{ transaction.user.username }}</span>
+                            <span class="text-xs font-black {% if transaction.jenis_transaksi == 'RUSAK' or transaction.jumlah_ktp < 0 %}text-rose-600{% else %}text-blue-600{% endif %}">
+                                {% if transaction.jumlah_ktp < 0 %}-{% else %}+{% endif %}{{ "{:,}".format(transaction.jumlah_ktp|abs).replace(',', '.') }} Keping
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="h-full flex flex-col items-center justify-center text-center py-10">
+                    <p class="text-slate-400 text-sm font-bold uppercase tracking-widest text-xs">Tidak ada data</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- New: Real-time Printing Log on Dashboard -->
+            <div class="p-8 border-t border-slate-50 bg-slate-50/50 rounded-b-[2.5rem]">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Cetak Terakhir</h3>
+                <div class="space-y-4">
+                    {% for item in recent_cetaks %}
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden">
+                        {% if item.status_cetak == 'GAGAL' %}
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-rose-500"></div>
+                        {% endif %}
+                        <div class="flex items-center space-x-3">
+                            <div class="w-2 h-2 rounded-full {% if item.status_cetak == 'GAGAL' %}bg-rose-500{% else %}bg-emerald-500 animate-pulse{% endif %}"></div>
+                            <div>
+                                <p class="text-[0.65rem] font-black text-slate-800">{{ item.nama_lengkap }}</p>
+                                <p class="text-[0.55rem] font-bold text-slate-400">{{ item.kecamatan.nama_kecamatan }} 
+                                    {% if item.status_cetak == 'GAGAL' %}
+                                    <span class="text-rose-500 ml-1 uppercase">[GAGAL]</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        <span class="text-[0.6rem] font-black text-indigo-500">{{ item.tanggal_cetak.strftime('%H:%M') }}</span>
+                    </div>
+                    {% else %}
+                    <p class="text-center text-[0.65rem] text-slate-300 font-bold italic py-4 uppercase">Belum ada aktivitas</p>
+                    {% endfor %}
+                </div>
+                <a href="{{ url_for('admin.monitoring_cetak') }}" class="block text-center mt-6 text-[0.65rem] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest">
+                    Lihat Monitoring Detail <i class="fa-solid fa-arrow-right ml-1"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/internal/admin_dashboard.js') }}"></script>
+{% endblock %}

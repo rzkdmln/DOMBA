@@ -1,0 +1,12 @@
+Flask==2.2.5
+flask-sqlalchemy==3.0.3
+flask-migrate==4.1.0
+flask-login==0.6.3
+psycopg2-binary==2.9.11
+python-dotenv==1.0.0
+pandas==2.2.3
+openpyxl==3.1.2
+flask-talisman==1.1.0
+flask-wtf==1.2.1
+flask-limiter==3.5.0
+email-validator==2.1.0.post1

@@ -1,0 +1,273 @@
+{% extends 'base_public.html' %}
+
+{% block title %}Dashboard Publik | DOMBA GARUT{% endblock %}
+
+{% block styles %}
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}" />
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public/index.css') }}">
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-pattern relative min-h-screen flex items-center pt-20 overflow-hidden">
+    <div class="container mx-auto px-6 relative z-10">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tighter">
+                <span class="block mb-4">Info Stok</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 py-2 block mb-4">Blangko KTP-el</span>
+                <span class="block">Jadi Lebih Transparan.</span>
+            </h1>
+            <p class="text-xl text-slate-400 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
+                Pantau ketersediaan blangko di seluruh titik layanan Kabupaten Garut dengan data yang akurat dan diperbarui secara instan.
+            </p>
+            <div class="flex flex-wrap gap-6 justify-center">
+                <a href="#data-stok" class="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-2xl shadow-blue-600/40 transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3">
+                    Lihat Data Stok <i class="fa-solid fa-arrow-right"></i>
+                </a>
+                <a href="#peta" class="px-10 py-5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold backdrop-blur-sm transition-all flex items-center gap-3">
+                    <i class="fa-solid fa-map"></i> Jelajahi Peta
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-32 bg-white relative">
+    <div class="container mx-auto px-6">
+        <div class="grid md:grid-cols-3 gap-12">
+            <div class="reveal text-center">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-blue-100 shadow-sm mx-auto">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-4">Update Instan</h3>
+                <p class="text-slate-500 leading-relaxed">Data diperbarui secara real-time setiap kali ada perubahan stok di titik layanan.</p>
+            </div>
+            <div class="reveal text-center">
+                <div class="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-emerald-100 shadow-sm mx-auto">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-4">Transparansi Data</h3>
+                <p class="text-slate-500 leading-relaxed">Masyarakat dapat melihat ketersediaan blangko secara terbuka tanpa perantara.</p>
+            </div>
+            <div class="reveal text-center">
+                <div class="w-16 h-16 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-2xl mb-8 border border-purple-100 shadow-sm mx-auto">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 mb-4">Pemetaan Akurat</h3>
+                <p class="text-slate-500 leading-relaxed">Visualisasi peta sebaran memudahkan pencarian titik layanan terdekat yang tersedia.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stats Grid -->
+<section id="data-stok" class="py-20 bg-slate-50 relative">
+    <div class="container mx-auto px-6">
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+            <div class="stats-card">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-600/30">
+                        <i class="fas fa-boxes-stacked"></i>
+                    </div>
+                    <span class="text-[0.6rem] font-black py-1 px-3 bg-blue-50 text-blue-600 rounded-full uppercase tracking-wider">Pusat</span>
+                </div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Stok Disdukcapil Garut</p>
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-4xl font-black text-slate-800 tracking-tighter">{{ "{:,}".format(total_stok_ktp).replace(',', '.') }}</h3>
+                    <span class="text-sm font-bold text-slate-400">Keping</span>
+                </div>
+            </div>
+
+            <div class="stats-card">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-emerald-500/30">
+                        <i class="fas fa-location-dot"></i>
+                    </div>
+                    <span class="text-[0.6rem] font-black py-1 px-3 bg-emerald-50 text-emerald-600 rounded-full uppercase tracking-wider">Aktif</span>
+                </div>
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Titik Layanan Tersedia</p>
+                <div class="flex items-baseline gap-2">
+                    <h3 class="text-4xl font-black text-slate-800 tracking-tighter">{{ active_kecamatan }}</h3>
+                    <span class="text-sm font-bold text-slate-400">Lokasi</span>
+                </div>
+            </div>
+
+            <div class="stats-card lg:col-span-2 bg-blue-600 border-none group overflow-hidden">
+                <!-- Background Decoration -->
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 time-bg"></div>
+                
+                <div class="flex justify-between items-start mb-6 relative z-10">
+                    <div class="w-14 h-14 bg-white/20 text-white rounded-2xl flex items-center justify-center text-2xl backdrop-blur-sm border border-white/20">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="text-white text-3xl" id="time-icon">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </div>
+                <p class="text-xs font-bold text-blue-100 uppercase tracking-widest mb-1 relative z-10">Update Terakhir Sistem</p>
+                <div class="flex flex-wrap items-center gap-6 relative z-10">
+                    <h3 class="text-4xl font-black text-white tracking-tighter" id="current-time-display">--:--:--</h3>
+                    <div class="h-10 w-px bg-white/20"></div>
+                    <h3 class="text-4xl font-black text-white tracking-tighter" id="current-date-display">-- --- ----</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Data -->
+        <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 overflow-hidden border border-slate-100 reveal">
+            <!-- Table Header/Controls -->
+            <div class="p-6 md:p-10 border-b border-slate-50 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                <div class="text-center lg:text-left">
+                    <h2 class="text-3xl font-black text-slate-800 tracking-tight mb-2">Daftar Stok Kecamatan</h2>
+                    <p class="text-slate-400 font-medium">Data ketersediaan blangko di 42 kecamatan Kabupaten Garut.</p>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto h-full">
+                    <div class="relative flex-grow lg:w-80">
+                        <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
+                        <input type="text" id="custom-search" placeholder="Cari kecamatan..." 
+                               class="w-full pl-14 pr-6 h-[60px] bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all shadow-inner font-bold text-slate-700">
+                    </div>
+                    <div class="flex items-center justify-center gap-3 bg-slate-50 rounded-2xl px-6 h-[60px] shadow-inner shrink-0">
+                        <span class="text-[0.6rem] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Baris:</span>
+                        <select id="custom-length" 
+                                class="bg-transparent border-none focus:ring-0 font-bold text-slate-700 cursor-pointer p-0">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="-1">Semua</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="px-4 md:px-10 pb-6 md:pb-10">
+                <table class="w-full text-left" id="dataTable">
+                    <thead>
+                            <tr class="bg-slate-50/50">
+                                <th class="px-4 md:px-8 py-5 text-[0.65rem] font-black text-slate-400 uppercase tracking-[0.2em]">No</th>
+                                <th class="px-4 md:px-10 py-5 text-[0.65rem] font-black text-slate-400 uppercase tracking-[0.2em]">Wilayah / Kecamatan</th>
+                                <th class="px-4 md:px-8 py-5 text-right text-[0.65rem] font-black text-slate-400 uppercase tracking-[0.2em]">Stok KTP-el</th>
+                                <th class="px-4 md:px-8 py-5 text-center text-[0.65rem] font-black text-slate-400 uppercase tracking-[0.2em]">Kondisi Stok</th>
+                                <th class="px-4 md:px-8 py-5 text-right text-[0.65rem] font-black text-slate-400 uppercase tracking-[0.2em]">Update Terakhir</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for item in stock_data %}
+                        <tr class="hover:bg-blue-50/50 transition-all duration-300 group">
+                            <td class="px-4 md:px-8 py-6">
+                                <span class="text-sm font-black text-slate-300 group-hover:text-blue-400 transition-colors">#{{ loop.index }}</span>
+                            </td>
+                            <td class="px-4 md:px-8 py-6">
+                                <div class="flex items-center gap-3 md:gap-4">
+                                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-[0.7rem] font-bold text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 uppercase shadow-sm shrink-0">
+                                        {{ item['nama_kecamatan'][:2] }}
+                                    </div>
+                                    <div>
+                                        <p class="font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors text-sm md:text-base leading-tight">{{ item['nama_kecamatan'] }}</p>
+                                        <p class="text-[0.6rem] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Kabupaten Garut</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-4 md:px-8 py-6 text-right" data-order="{{ item['jumlah_ktp'] }}">
+                                <div class="inline-flex flex-col items-end">
+                                    <span class="text-lg md:text-xl font-black text-slate-800 group-hover:text-blue-600 transition-colors">
+                                        {{ "{:,}".format(item['jumlah_ktp']).replace(',', '.') }}
+                                    </span>
+                                    <span class="text-[0.55rem] font-black text-slate-400 uppercase tracking-tighter">Keping</span>
+                                </div>
+                            </td>
+                            <td class="px-4 md:px-8 py-6 text-center">
+                                {% if item['jumlah_ktp'] > 20 %}
+                                <div class="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100/50 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                    <span class="text-[0.6rem] md:text-[0.65rem] font-black uppercase tracking-wider">Tersedia</span>
+                                </div>
+                                {% elif item['jumlah_ktp'] > 0 %}
+                                <div class="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100/50 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                                    <span class="text-[0.6rem] md:text-[0.65rem] font-black uppercase tracking-wider">Limit</span>
+                                </div>
+                                {% else %}
+                                <div class="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100/50 shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                    <span class="text-[0.6rem] md:text-[0.65rem] font-black uppercase tracking-wider">Habis</span>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 md:px-8 py-6 text-right">
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[10px] md:text-xs font-black text-slate-700 whitespace-nowrap">{{ item['last_updated'].split(' ')[0] }}</span>
+                                    <span class="text-[0.55rem] md:text-[0.6rem] font-bold text-slate-400 uppercase tracking-tighter mt-1 whitespace-nowrap">{{ item['last_updated'].split(' ')[1] }} WIB</span>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Map Section -->
+<section id="peta" class="py-32 bg-white relative overflow-hidden">
+    <!-- Background Decoration -->
+    <div class="absolute top-0 right-0 w-[50%] h-full bg-slate-50/50 rounded-l-[10rem] -z-10"></div>
+    
+    <div class="container mx-auto px-6">
+        <div class="grid lg:grid-cols-12 gap-16 items-center">
+            <div class="lg:col-span-4 reveal">
+                <div class="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[0.65rem] font-bold uppercase tracking-widest mb-6">
+                    Interaktif
+                </div>
+                <h2 class="text-4xl md:text-5xl font-black text-slate-900 mb-8 tracking-tighter leading-tight">Navigasi Peta Ketersediaan Blangko.</h2>
+                <p class="text-lg text-slate-500 mb-10 leading-relaxed font-medium">Klik pada marker di peta untuk melihat detail stok blangko di lokasi tersebut secara rinci.</p>
+                
+                <div class="space-y-6">
+                    <div class="flex items-center gap-5 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_15px_rgba(16,185,129,0.5)]"></div>
+                        <span class="text-sm font-bold text-slate-700">Tersedia (> 20 Keping)</span>
+                    </div>
+                    <div class="flex items-center gap-5 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="w-3 h-3 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]"></div>
+                        <span class="text-sm font-bold text-slate-700">Terbatas (1-20 Keping)</span>
+                    </div>
+                    <div class="flex items-center gap-5 p-5 bg-white rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                        <div class="w-3 h-3 bg-rose-500 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)]"></div>
+                        <span class="text-sm font-bold text-slate-700">Habis (0 Keping)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="lg:col-span-8 relative reveal">
+                <div id="map" data-stock='{{ stock_data|tojson }}'></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Scroll to Top Button -->
+<button id="scrollToTopBtn" class="fixed bottom-8 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition-all duration-300 opacity-0 invisible z-50" style="display: none;">
+    <i class="fas fa-arrow-up"></i>
+</button>
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Leaflet JS -->
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+<!-- Turf.js for geospatial calculations -->
+<script src="{{ url_for('static', filename='vendor/turf/turf.min.js') }}"></script>
+<!-- jQuery -->
+<script src="{{ url_for('static', filename='vendor/jquery/jquery.min.js') }}"></script>
+<!-- DataTables JS -->
+<script src="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/public/index.js') }}"></script>
+{% endblock %}
+

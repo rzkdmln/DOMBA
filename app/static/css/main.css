@@ -1,0 +1,133 @@
+/* app/static/css/main.css */
+:root {
+    --primary-navy: #1e293b;
+    --accent-blue: #1e40af;
+}
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    body {
+        color: rgb(30 41 59);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+}
+
+/* Custom Scrollbar for modern feel */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgb(226 232 240);
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(203 213 225);
+    transition: background-color 0.15s ease-in-out;
+}
+
+/* DataTables Global Adjustments */
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: rgb(241 245 249);
+    color: rgb(30 41 59) !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+    background: rgb(37 99 235);
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_info {
+    color: rgb(100 116 139);
+    font-size: 0.875rem;
+    margin-top: 1rem !important;
+}
+
+/* Custom Components */
+.nav-link {
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 600;
+    transition: all 0.3s;
+    position: relative;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.nav-link:hover {
+    color: white;
+}
+
+.nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: rgb(96, 165, 250);
+    transition: all 0.3s;
+}
+
+.nav-link:hover::after {
+    width: 100%;
+}
+
+.admin-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: rgb(15, 23, 42);
+    color: white;
+    z-index: 1000;
+    transition: all 0.3s;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow-y: auto;
+    overflow-x: hidden;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-nav-link {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    color: rgb(148, 163, 184);
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.sidebar-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: white;
+}
+
+.sidebar-nav-link.active {
+    background-color: rgba(37, 99, 235, 0.1);
+    color: rgb(96, 165, 250);
+    border-right: 4px solid rgb(59, 130, 246);
+    font-weight: 600;
+}
+
+.sidebar-text {
+    transition: all 0.3s;
+}

@@ -1,0 +1,354 @@
+{% extends 'base_internal.html' %}
+
+{% block title %}Master User | DOMBA{% endblock %}
+{% block header_title %}Manajemen Pengguna{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-extrabold text-slate-800">Daftar Pengguna</h2>
+            <p class="text-slate-500 text-sm italic">Kelola akun administrator dan operator kecamatan.</p>
+        </div>
+        <button id="addUserBtn" onclick="openAddModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center">
+            <i class="fa-solid fa-user-plus mr-2"></i> Tambah User Baru
+        </button>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center">
+            <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center text-xl mr-4">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Total User</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{ total_filtered_users }}</h3>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center">
+            <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl mr-4">
+                <i class="fa-solid fa-user-shield"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Admin</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{ admin_count }}</h3>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center">
+            <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl mr-4">
+                <i class="fa-solid fa-user-group"></i>
+            </div>
+            <div>
+                <p class="text-sm font-medium text-slate-500">Operator</p>
+                <h3 class="text-2xl font-bold text-slate-800">{{ operator_count }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+        <div class="p-6 border-b border-slate-50">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="relative w-full md:w-96">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input id="searchInput" type="text" placeholder="Cari berdasarkan nama atau username..." 
+                           value="{{ search }}"
+                           class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm shadow-sm"
+                           autocomplete="off">
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <i class="fa-solid fa-filter text-slate-400 text-xs"></i>
+                        <select id="roleFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <option value="">Semua Peran</option>
+                            <option value="admin" {% if role_filter == 'admin' %}selected{% endif %}>Admin</option>
+                            <option value="operator" {% if role_filter == 'operator' %}selected{% endif %}>Operator</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Tampilkan</span>
+                        <select id="perPageSelect" class="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer">
+                            <option value="10" {% if pagination_info and pagination_info.per_page == 10 %}selected{% endif %}>10</option>
+                            <option value="20" {% if pagination_info and pagination_info.per_page == 20 %}selected{% endif %}>20</option>
+                            <option value="0" {% if not pagination_info or pagination_info.per_page == 0 %}selected{% endif %}>Semua</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="bg-slate-50/50">
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest text-center w-16">ID</th>
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="1">Informasi User <i class="fa-solid fa-sort ml-1"></i></th>
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="2">Username <i class="fa-solid fa-sort ml-1"></i></th>
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="3">Peran <i class="fa-solid fa-sort ml-1"></i></th>
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest sortable" data-column="4">Aktivitas Terakhir <i class="fa-solid fa-sort ml-1"></i></th>
+                        <th class="px-6 py-4 text-[0.65rem] font-bold text-slate-500 uppercase tracking-widest text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for user in users %}
+                    <tr class="hover:bg-slate-50/50 transition-colors group">
+                        <td class="px-6 py-4 text-center">
+                            <span class="text-sm font-bold text-slate-400">#{{ user.id }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                                    {{ user.username[:2]|upper }}
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-bold text-slate-800">{{ user.nama_lengkap|title if user.nama_lengkap else user.username|title }}</p>
+                                    {% if user.created_at %}
+                                    <p class="text-xs text-slate-500">dibuat: {{ user.created_at.strftime('%d %b %Y') }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="text-sm font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-lg">{{ user.username|lower }}</span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if user.role == 'admin_dinas' %}
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-[0.65rem] font-black rounded-full uppercase tracking-tighter ring-1 ring-indigo-200">Admin</span>
+                            {% else %}
+                                <span class="px-3 py-1 bg-blue-100 text-blue-700 text-[0.65rem] font-black rounded-full uppercase tracking-tighter ring-1 ring-blue-200">Operator</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm text-slate-600">{{ user.last_login.strftime('%d %b %Y, %H:%M') if user.last_login else '-' }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center justify-center space-x-2">
+                                <button 
+                                    data-id="{{ user.id }}" 
+                                    data-username="{{ user.username }}" 
+                                    data-nama="{{ user.nama_lengkap|default(user.username) }}" 
+                                    data-role="{{ user.role }}" 
+                                    data-created="{{ user.created_at.strftime('%d %b %Y') if user.created_at else '' }}" 
+                                    data-last-login="{{ user.last_login.strftime('%d %b %Y, %H:%M') if user.last_login else '' }}"
+                                    onclick="openViewModal(this)" 
+                                    class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" 
+                                    title="View Detail">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+                                <button 
+                                    data-id="{{ user.id }}" 
+                                    data-username="{{ user.username }}" 
+                                    data-role="{{ user.role }}"
+                                    onclick="openEditModal(this)" 
+                                    class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
+                                    title="Edit">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus user {{ user.username }}?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Hapus">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </form>
+                                <button 
+                                    data-id="{{ user.id }}" 
+                                    data-username="{{ user.username }}"
+                                    onclick="resetPassword(this)" 
+                                    class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" 
+                                    title="Reset Password">
+                                    <i class="fa-solid fa-key"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="px-6 py-10 text-center text-slate-400 font-medium italic">Belum ada data user.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination Controls -->
+        {% if pagination_info %}
+        <div id="pagination-controls" class="p-6 bg-slate-50/30 flex items-center justify-between border-t border-slate-50">
+            <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">
+                Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} user
+            </p>
+            <div class="flex items-center space-x-2">
+                {% if pagination_info.has_prev %}
+                <a href="{{ url_for('admin.master_user', page=pagination_info.prev_page, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+                </a>
+                {% endif %}
+                
+                {% set start_page = 1 if pagination_info.page - 2 < 1 else pagination_info.page - 2 %}
+                {% set end_page = pagination_info.total_pages if pagination_info.page + 2 > pagination_info.total_pages else pagination_info.page + 2 %}
+                
+                {% if start_page > 1 %}
+                <a href="{{ url_for('admin.master_user', page=1, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">1</a>
+                {% if start_page > 2 %}
+                <span class="px-2 py-2 text-slate-400">...</span>
+                {% endif %}
+                {% endif %}
+                
+                {% for page_num in range(start_page, end_page + 1) %}
+                <a href="{{ url_for('admin.master_user', page=page_num, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
+                   class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors
+                   {% if page_num == pagination_info.page %}
+                   bg-blue-600 text-white border-blue-600
+                   {% else %}
+                   bg-white text-slate-600 border-slate-200 hover:bg-slate-50
+                   {% endif %}">
+                   {{ page_num }}
+                </a>
+                {% endfor %}
+                
+                {% if end_page < pagination_info.total_pages %}
+                {% if end_page < pagination_info.total_pages - 1 %}
+                <span class="px-2 py-2 text-slate-400">...</span>
+                {% endif %}
+                <a href="{{ url_for('admin.master_user', page=pagination_info.total_pages, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">{{ pagination_info.total_pages }}</a>
+                {% endif %}
+                
+                {% if pagination_info.has_next %}
+                <a href="{{ url_for('admin.master_user', page=pagination_info.next_page, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
+                    Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div id="addUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-slate-800 mb-6">Tambah User Baru</h3>
+        <form action="{{ url_for('admin.add_user') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Username</label>
+                <input type="text" name="username" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Nama Lengkap</label>
+                <input type="text" name="nama_lengkap" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Password</label>
+                <input type="password" name="password" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
+                <select name="role" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required onchange="toggleKecamatanFieldAdd()">
+                    <option value="operator_kecamatan">Operator Kecamatan</option>
+                    <option value="admin_dinas">Admin Dinas</option>
+                </select>
+            </div>
+            <div class="mb-4" id="kecamatanFieldAdd">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Kecamatan (untuk Operator)</label>
+                <select name="kecamatan_id" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500">
+                    <option value="">Pilih Kecamatan</option>
+                    {% for kec in kecamatans %}
+                    <option value="{{ kec.id }}">{{ kec.nama_kecamatan }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex space-x-4">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold hover:bg-blue-700 transition-colors">Tambah</button>
+                <button type="button" onclick="closeAddModal()" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-colors">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div id="editUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-slate-800 mb-6">Edit User</h3>
+        <form action="{{ url_for('admin.edit_user') }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="user_id" id="edit_user_id">
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Username</label>
+                <input type="text" name="username" id="edit_username" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Nama Lengkap</label>
+                <input type="text" name="nama_lengkap" id="edit_nama_lengkap" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Role</label>
+                <select name="role" id="edit_role" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500" required onchange="toggleKecamatanField()">
+                    <option value="operator_kecamatan">Operator Kecamatan</option>
+                    <option value="admin_dinas">Admin Dinas</option>
+                </select>
+            </div>
+            <div class="mb-4" id="kecamatanField">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Kecamatan (untuk Operator)</label>
+                <select name="kecamatan_id" id="edit_kecamatan_id" class="w-full p-3 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-blue-500">
+                    <option value="">Pilih Kecamatan</option>
+                    {% for kec in kecamatans %}
+                    <option value="{{ kec.id }}">{{ kec.nama_kecamatan }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex space-x-4">
+                <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-2xl font-bold hover:bg-blue-700 transition-colors">Simpan</button>
+                <button type="button" onclick="closeEditModal()" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-colors">Batal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- View User Modal -->
+<div id="viewUserModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4">
+        <h3 class="text-xl font-bold text-slate-800 mb-6">Detail User</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">ID User</label>
+                <p class="text-sm font-black text-slate-700" id="viewUserId"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                <p class="text-sm font-black text-slate-700" id="viewUsername"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap</label>
+                <p class="text-sm font-black text-slate-700" id="viewNamaLengkap"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Peran</label>
+                <p class="text-sm font-black text-slate-700" id="viewRole"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal Dibuat</label>
+                <p class="text-sm font-black text-slate-700" id="viewCreatedAt"></p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Aktivitas Terakhir</label>
+                <p class="text-sm font-black text-slate-700" id="viewLastLogin"></p>
+            </div>
+        </div>
+        <div class="flex space-x-4 mt-6">
+            <button type="button" onclick="closeViewModal()" class="flex-1 bg-slate-200 text-slate-700 py-3 rounded-2xl font-bold hover:bg-slate-300 transition-colors">Tutup</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/internal/admin_master_user.js') }}"></script>
+{% endblock %}

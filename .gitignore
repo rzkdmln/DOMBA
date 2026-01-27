@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*\.class
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Flask instance folder
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+
+# Frontend / Node (karena ada package.json)
+node_modules/
+.npm
+npm-debug.log*
+
+# IDEs
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

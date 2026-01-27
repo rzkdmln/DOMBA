@@ -1,0 +1,171 @@
+/* Profil Page Styles */
+.profil-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.profil-card {
+    background: white;
+    border-radius: 1.25rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgb(241 245 249);
+    overflow: hidden;
+}
+
+.profil-header {
+    padding: 2rem;
+    border-bottom: 1px solid rgb(241 245 249);
+}
+
+.profil-title {
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: rgb(30 41 59);
+    letter-spacing: -0.025em;
+}
+
+.profil-subtitle {
+    color: rgb(100 116 139);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.profil-content {
+    padding: 2rem;
+}
+
+.profil-content > * + * {
+    margin-top: 2rem;
+}
+
+.profil-section {
+    background: rgb(248 250 252 / 0.5);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    border: 1px solid rgb(241 245 249);
+}
+
+.profil-section-title {
+    font-size: 1.125rem;
+    font-weight: 900;
+    color: rgb(30 41 59);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.profil-section-title i {
+    margin-right: 0.75rem;
+}
+
+.profil-form-group {
+    margin-bottom: 1.5rem;
+}
+
+.profil-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: rgb(71 85 105);
+    margin-bottom: 0.5rem;
+}
+
+.profil-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.profil-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgb(59 130 246);
+    border-color: transparent;
+}
+
+.profil-input[readonly] {
+    background-color: rgb(241 245 249);
+    cursor: not-allowed;
+    color: rgb(71 85 105);
+}
+
+.profil-input-uppercase {
+    text-transform: uppercase;
+}
+
+.profil-help-text {
+    font-size: 0.75rem;
+    color: rgb(100 116 139);
+    margin-top: 0.25rem;
+}
+
+.profil-password-group {
+    position: relative;
+}
+
+.profil-password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgb(148 163 184);
+    transition: color 0.2s;
+}
+
+.profil-password-toggle:hover {
+    color: rgb(71 85 105);
+}
+
+.profil-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 700;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    border: none;
+}
+
+.profil-btn-primary {
+    background-color: rgb(37 99 235);
+    color: white;
+}
+
+.profil-btn-primary:hover {
+    background-color: rgb(29 78 216);
+}
+
+.profil-btn-success {
+    background-color: rgb(34 197 94);
+    color: white;
+}
+
+.profil-btn-success:hover {
+    background-color: rgb(22 163 74);
+}
+
+.profil-required {
+    color: rgb(239 68 68);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .profil-content {
+        padding: 1.5rem;
+    }
+
+    .profil-header {
+        padding: 1.5rem;
+    }
+
+    .profil-section {
+        padding: 1rem;
+    }
+
+    .profil-section-title {
+        font-size: 1rem;
+    }
+}
