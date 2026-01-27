@@ -74,6 +74,16 @@ python app.py
 
 Aplikasi akan berjalan di `http://127.0.0.1:8000` dan dapat diakses dari jaringan lokal.
 
+## Panduan Produksi (Deployment)
+
+Untuk mendeploy aplikasi ini ke server produksi (VPS), silakan merujuk pada panduan detail di [PRODUCTION.md](PRODUCTION.md). Secara garis besar, tahapan yang diperlukan adalah:
+
+1. **Setup Server**: Persiapan Python, PostgreSQL, dan Nginx pada Ubuntu/Debian atau CentOS.
+2. **Database**: Inisialisasi database dan user PostgreSQL.
+3. **App Setup**: Konfigurasi virtual environment, install dependencies, dan environment variables.
+4. **Service**: Menggunakan Gunicorn dan Systemd untuk agar aplikasi berjalan di background.
+5. **Web Server**: Konfigurasi Nginx sebagai Reverse Proxy dan SSL (Certbot) untuk keamanan HTTPS.
+
 ### Akses Sistem
 
 - **Dashboard Publik**: `http://127.0.0.1:8000/`
