@@ -12,7 +12,7 @@ $(document).ready(function() {
             }
         },
         "pageLength": 10,
-        "order": [[2, "desc"]],
+        "order": [[1, "desc"]],
         "dom": '<"overflow-x-auto -mx-4 md:mx-0"t>p'
     });
 
@@ -99,6 +99,9 @@ $(document).ready(function() {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
+    let markers = [];
+    let activeFilters = [];
+
     // Load GeoJSON and calculate centroids
     let kecamatanCoords = {};
     fetch('/static/data/garut_kecamatan.geojson')
@@ -163,21 +166,20 @@ $(document).ready(function() {
         });
 
     function placeMarkers() {
+        // Clear existing markers if any
+        markers.forEach(m => map.removeLayer(m.marker));
+        markers = [];
+
         // Dynamic Markers from Stock Data
         const stockData = JSON.parse(document.getElementById('map').dataset.stock);
 
         stockData.forEach(function(item) {
             const name = item.nama_kecamatan;
-            
-            // Clean name for matching
             let cleanName = name.replace(/^Kecamatan\s+/, '').replace(/^Dinas$/, 'Garut Kota');
-            
             const stock = item.jumlah_ktp;
             
-            // Get precise coordinates
             let coords;
             if (name === 'Dinas') {
-                // Exact coordinates for Dinas Kependudukan dan Pencatatan Sipil Kabupaten Garut
                 coords = [-7.2018145, 107.8852168];
             } else {
                 coords = kecamatanCoords[cleanName];
@@ -187,19 +189,25 @@ $(document).ready(function() {
             }
             
             let color = '#10b981'; // green
-            if (stock === 0) color = '#f43f5e'; // red
-            else if (stock <= 20) color = '#f59e0b'; // amber
+            let category = 'tersedia';
+            if (stock === 0) {
+                color = '#f43f5e'; // red
+                category = 'habis';
+            } else if (stock <= 20) {
+                color = '#f59e0b'; // amber
+                category = 'terbatas';
+            }
 
-            const circleMarker = L.circleMarker(coords, {
+            const marker = L.circleMarker(coords, {
                 radius: 12,
                 fillColor: color,
                 color: '#fff',
                 weight: 3,
                 opacity: 1,
                 fillOpacity: 0.8
-            }).addTo(map);
+            });
 
-            circleMarker.bindPopup(`
+            marker.bindPopup(`
                 <div class="p-3">
                     <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Wilayah</div>
                     <div class="text-lg font-black text-slate-800 mb-3">${name}</div>
@@ -211,6 +219,43 @@ $(document).ready(function() {
                     </div>
                 </div>
             `);
+
+            markers.push({
+                marker: marker,
+                category: category
+            });
+            
+            marker.addTo(map);
+        });
+    }
+
+    // Filter Logic
+    $('.filter-btn').click(function() {
+        const filter = $(this).data('filter');
+        const index = activeFilters.indexOf(filter);
+
+        if (index > -1) {
+            activeFilters.splice(index, 1);
+            $(this).removeClass('ring-4 ring-blue-500/20 border-blue-200 bg-blue-50/30');
+        } else {
+            activeFilters.push(filter);
+            $(this).addClass('ring-4 ring-blue-500/20 border-blue-200 bg-blue-50/30');
+        }
+
+        updateMarkersVisibility();
+    });
+
+    function updateMarkersVisibility() {
+        markers.forEach(item => {
+            if (activeFilters.length === 0 || activeFilters.includes(item.category)) {
+                if (!map.hasLayer(item.marker)) {
+                    item.marker.addTo(map);
+                }
+            } else {
+                if (map.hasLayer(item.marker)) {
+                    map.removeLayer(item.marker);
+                }
+            }
         });
     }
 
