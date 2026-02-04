@@ -4,7 +4,12 @@ $(document).ready(function() {
     // Init DataTable
     const table = $('#dataTable').DataTable({
         "language": {
-            "url": "/static/vendor/datatables/id.json"
+            "url": "/static/vendor/datatables/id.json",
+            "info": "_START_-_END_ dari _TOTAL_",
+            "paginate": {
+                "previous": '<i class="fa-solid fa-chevron-left"></i>',
+                "next": '<i class="fa-solid fa-chevron-right"></i>'
+            }
         },
         "pageLength": 10,
         "order": [[2, "desc"]],

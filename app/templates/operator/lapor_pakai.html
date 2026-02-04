@@ -17,7 +17,7 @@
             <i class="fa-solid fa-id-card text-7xl absolute right-8 top-1/2 -translate-y-1/2 text-white/10"></i>
         </div>
 
-        <form action="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai') }}" method="POST" class="p-8" novalidate onsubmit="return validateForm()">
+        <form action="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai') }}" method="POST" class="p-8" novalidate onsubmit="return validateForm(this)">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <!-- NIK -->
@@ -271,14 +271,14 @@
         {% if pagination_info %}
         <div id="pagination-controls" class="px-8 py-6 border-t border-slate-50 bg-slate-50/30">
             <div class="flex items-center justify-between">
-                <div class="text-sm text-slate-600">
-                    Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} cetakan
+                <div class="text-xs font-bold text-slate-500 uppercase tracking-tight">
+                    {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
                 </div>
                 <div class="flex items-center space-x-2">
                     {% if pagination_info.has_prev %}
                     <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=pagination_info.prev_page, per_page=pagination_info.per_page) }}"
-                       class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
-                        <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+                       class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
+                        <i class="fa-solid fa-chevron-left"></i>
                     </a>
                     {% endif %}
 
@@ -315,8 +315,8 @@
 
                     {% if pagination_info.has_next %}
                     <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=pagination_info.next_page, per_page=pagination_info.per_page) }}"
-                       class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
-                        Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+                       class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
+                        <i class="fa-solid fa-chevron-right"></i>
                     </a>
                     {% endif %}
                 </div>
@@ -393,7 +393,7 @@
             <h3 class="text-xl font-black">Edit Data Cetakan</h3>
             <p class="text-blue-100/80 text-sm font-medium mt-1">Update seluruh informasi pencetakan dan pengambilan</p>
         </div>
-        <form id="editForm" method="POST" class="p-8 space-y-6 overflow-y-auto">
+        <form id="editForm" method="POST" onsubmit="return validateForm(this)" class="p-8 space-y-6 overflow-y-auto">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -430,14 +430,14 @@
                     <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Registrasi IKD</label>
                     <div class="grid grid-cols-2 gap-2">
                         <label class="cursor-pointer group">
-                            <input type="radio" name="registrasi_ikd" value="true" class="peer hidden">
+                            <input type="radio" name="registrasi_ikd" value="true" class="peer hidden" required>
                             <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-100 bg-white font-black text-slate-400 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition-all shadow-sm hover:shadow-md text-sm">
                                 <i class="fa-solid fa-check mb-1 block text-lg"></i>
                                 YA
                             </div>
                         </label>
                         <label class="cursor-pointer group">
-                            <input type="radio" name="registrasi_ikd" value="false" checked class="peer hidden">
+                            <input type="radio" name="registrasi_ikd" value="false" class="peer hidden" required>
                             <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-100 bg-white font-black text-slate-400 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition-all shadow-sm hover:shadow-md text-sm">
                                 <i class="fa-solid fa-xmark mb-1 block text-lg"></i>
                                 TIDAK

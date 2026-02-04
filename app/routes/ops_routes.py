@@ -76,8 +76,8 @@ def lapor_pakai():
         status_cetak = request.form.get('status_cetak', 'BERHASIL')
         keterangan_gagal = request.form.get('keterangan_gagal')
         
-        if not nik or not nama or not jenis_cetak:
-            flash('NIK, Nama Lengkap, dan Jenis Cetak are required!', 'danger')
+        if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
+            flash('NIK, Nama Lengkap, Jenis Cetak, dan Status IKD wajib diisi!', 'danger')
             return redirect(url_for('operator.lapor_pakai'))
         
         # Validasi NIK: 16 digit angka
@@ -303,8 +303,8 @@ def update_cetak(id):
     hubungan = request.form.get('hubungan')
     penerima = request.form.get('penerima')
     
-    if not nik or not nama or not jenis_cetak:
-        flash('NIK, Nama Lengkap, dan Jenis Cetak are required!', 'danger')
+    if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
+        flash('Semua data wajib diisi, termasuk status Registrasi IKD!', 'danger')
         return redirect(url_for('operator.lapor_pakai'))
     
     # Validasi NIK: 16 digit angka

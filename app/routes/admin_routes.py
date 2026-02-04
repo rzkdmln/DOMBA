@@ -249,8 +249,8 @@ def lapor_pakai():
         status_cetak = request.form.get('status_cetak', 'BERHASIL')
         keterangan_gagal = request.form.get('keterangan_gagal')
         
-        if not nik or not nama or not jenis_cetak:
-            flash('NIK, Nama Lengkap, dan Jenis Cetak are required!', 'danger')
+        if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
+            flash('NIK, Nama Lengkap, Jenis Cetak, dan Status IKD wajib diisi!', 'danger')
             return redirect(url_for('admin.lapor_pakai'))
         
         # Validasi NIK: 16 digit angka
@@ -383,8 +383,8 @@ def update_cetak(id):
     hubungan = request.form.get('hubungan')
     penerima = request.form.get('penerima')
     
-    if not nik or not nama or not jenis_cetak:
-        flash('Semua field required!', 'danger')
+    if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
+        flash('Semua field wajib diisi, termasuk status Registrasi IKD!', 'danger')
         return redirect(url_for('admin.lapor_pakai'))
     
     record.nik = nik
@@ -562,6 +562,8 @@ def export_cetak():
             'Kecamatan': c.kecamatan.nama_kecamatan,
             'NIK': c.nik,
             'Nama Lengkap': c.nama_lengkap,
+            'Jenis Cetak': c.jenis_cetak or 'KTP-EL',
+            'Registrasi IKD': 'Ya' if c.registrasi_ikd else 'Tidak',
             'Kondisi': c.status_cetak,
             'Keterangan Gagal': c.keterangan_gagal or '-',
             'Status Ambil': 'Sudah Diambil' if c.status_ambil else 'Belum Diambil',

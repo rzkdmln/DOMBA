@@ -48,8 +48,20 @@
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
-    background: rgb(241 245 249);
-    color: rgb(30 41 59) !important;
+    background: #dbeafe !important; /* Biru muda background */
+    color: #1e40af !important; /* Biru tua teks */
+    border: none !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+    background: rgb(37 99 235) !important; /* Tetap biru terang untuk halaman aktif */
+    color: white !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover {
+    background: transparent !important;
+    color: rgb(148, 163, 184) !important;
+    cursor: default;
 }
 
 .dataTables_wrapper .dataTables_paginate .paginate_button.current {

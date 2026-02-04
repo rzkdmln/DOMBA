@@ -99,16 +99,11 @@
                             <span class="text-sm font-bold text-slate-400">#{{ user.id }}</span>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                                    {{ user.username[:2]|upper }}
-                                </div>
-                                <div class="ml-3">
-                                    <p class="text-sm font-bold text-slate-800">{{ user.nama_lengkap|title if user.nama_lengkap else user.username|title }}</p>
-                                    {% if user.created_at %}
-                                    <p class="text-xs text-slate-500">dibuat: {{ user.created_at.strftime('%d %b %Y') }}</p>
-                                    {% endif %}
-                                </div>
+                            <div>
+                                <p class="text-sm font-bold text-slate-800">{{ user.nama_lengkap|title if user.nama_lengkap else user.username|title }}</p>
+                                {% if user.created_at %}
+                                <p class="text-xs text-slate-500">dibuat: {{ user.created_at.strftime('%d %b %Y') }}</p>
+                                {% endif %}
                             </div>
                         </td>
                         <td class="px-6 py-4">
@@ -176,14 +171,14 @@
         <!-- Pagination Controls -->
         {% if pagination_info %}
         <div id="pagination-controls" class="p-6 bg-slate-50/30 flex items-center justify-between border-t border-slate-50">
-            <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">
-                Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} user
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-tight">
+                {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
             </p>
             <div class="flex items-center space-x-2">
                 {% if pagination_info.has_prev %}
                 <a href="{{ url_for('admin.master_user', page=pagination_info.prev_page, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
-                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
-                    <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
+                    <i class="fa-solid fa-chevron-left"></i>
                 </a>
                 {% endif %}
                 
@@ -220,8 +215,8 @@
                 
                 {% if pagination_info.has_next %}
                 <a href="{{ url_for('admin.master_user', page=pagination_info.next_page, per_page=pagination_info.per_page, search=search, role=role_filter) }}" 
-                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
-                    Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+                   class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
+                    <i class="fa-solid fa-chevron-right"></i>
                 </a>
                 {% endif %}
             </div>

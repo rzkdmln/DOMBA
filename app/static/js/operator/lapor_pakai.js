@@ -202,6 +202,25 @@ function toggleGagalReason(show) {
     }
 }
 
+function confirmUpdate() {
+    Swal.fire({
+        title: 'Konfirmasi Pengambilan?',
+        text: 'Pastikan data pengambil sudah sesuai.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#d1d5db',
+        confirmButtonText: 'Ya, Sudah Diambil',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById('ambilForm').submit();
+        }
+    });
+    return false;
+}
+
 function deleteCetak(button) {
     const id = button.dataset.id;
     Swal.fire({
@@ -221,13 +240,14 @@ function deleteCetak(button) {
     });
 }
 
-function validateForm() {
-    const nik = document.querySelector('input[name="nik"]').value.trim();
-    const namaLengkap = document.querySelector('input[name="nama_lengkap"]').value.trim();
-    const jenisCetak = document.querySelector('select[name="jenis_cetak"]').value;
-    const statusCetak = document.querySelector('input[name="status_cetak"]:checked');
-    const registrasiIkd = document.querySelector('input[name="registrasi_ikd"]:checked');
-    const keteranganGagal = document.querySelector('textarea[name="keterangan_gagal"]').value.trim();
+function validateForm(form) {
+    const nik = form.querySelector('input[name="nik"]').value.trim();
+    const namaLengkap = form.querySelector('input[name="nama_lengkap"]').value.trim();
+    const jenisCetak = form.querySelector('select[name="jenis_cetak"]').value;
+    const statusCetak = form.querySelector('input[name="status_cetak"]:checked');
+    const registrasiIkd = form.querySelector('input[name="registrasi_ikd"]:checked');
+    const keteranganGagalInput = form.querySelector('textarea[name="keterangan_gagal"]');
+    const keteranganGagal = keteranganGagalInput ? keteranganGagalInput.value.trim() : "";
 
     // Check NIK
     if (!nik) {
@@ -304,7 +324,24 @@ function validateForm() {
         return false;
     }
 
-    return true;
+    // If valid, show confirmation
+    Swal.fire({
+        title: 'Simpan Data?',
+        text: 'Pastikan data yang diinput sudah benar.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#4f46e5',
+        cancelButtonColor: '#d1d5db',
+        confirmButtonText: 'Ya, Simpan',
+        cancelButtonText: 'Batal',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit();
+        }
+    });
+
+    return false; // Always return false to handle submission via then()
 }
 
 function initSorting() {

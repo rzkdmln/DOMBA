@@ -131,14 +131,9 @@
                         {% for kecamatan, ktp, kia, updated in stock_data %}
                         <tr class="hover:bg-blue-50/30 transition-all group">
                             <td class="px-8 py-6">
-                                <div class="flex items-center space-x-4">
-                                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                                        {{ kecamatan[:2] | upper }}
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-800">{{ kecamatan }}</p>
-                                        <p class="text-[0.65rem] text-slate-400 italic">Kabupaten Garut</p>
-                                    </div>
+                                <div>
+                                    <p class="text-sm font-bold text-slate-800">{{ kecamatan }}</p>
+                                    <p class="text-[0.65rem] text-slate-400 italic">Kabupaten Garut</p>
                                 </div>
                             </td>
                             <td class="px-8 py-6 text-center">
@@ -170,14 +165,14 @@
             {% if pagination_info %}
             <div id="pagination-controls" class="px-8 py-6 border-t border-slate-50 bg-slate-50/30">
                 <div class="flex items-center justify-between">
-                    <div class="text-sm text-slate-600">
-                        Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} kecamatan
+                    <div class="text-xs font-bold text-slate-500 uppercase tracking-tight">
+                        {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
                     </div>
                     <div class="flex items-center space-x-2">
                         {% if pagination_info.has_prev %}
                         <a href="{{ url_for('admin.dashboard', page=pagination_info.prev_page, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
-                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
-                            <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
+                            <i class="fa-solid fa-chevron-left"></i>
                         </a>
                         {% endif %}
                         
@@ -214,8 +209,8 @@
                         
                         {% if pagination_info.has_next %}
                         <a href="{{ url_for('admin.dashboard', page=pagination_info.next_page, per_page=pagination_info.per_page, sort_by=request.args.get('sort_by', 'jumlah_ktp'), sort_order=request.args.get('sort_order', 'desc')) }}" 
-                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
-                            Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+                           class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
+                            <i class="fa-solid fa-chevron-right"></i>
                         </a>
                         {% endif %}
                     </div>

@@ -164,14 +164,9 @@
                                 <span class="text-sm font-black text-slate-300 group-hover:text-blue-400 transition-colors">#{{ loop.index }}</span>
                             </td>
                             <td class="px-4 md:px-8 py-6">
-                                <div class="flex items-center gap-3 md:gap-4">
-                                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-[0.7rem] font-bold text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 uppercase shadow-sm shrink-0">
-                                        {{ item['nama_kecamatan'][:2] }}
-                                    </div>
-                                    <div>
-                                        <p class="font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors text-sm md:text-base leading-tight">{{ item['nama_kecamatan'] }}</p>
-                                        <p class="text-[0.6rem] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Kabupaten Garut</p>
-                                    </div>
+                                <div>
+                                    <p class="font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors text-sm md:text-base leading-tight">{{ item['nama_kecamatan'] }}</p>
+                                    <p class="text-[0.6rem] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Kabupaten Garut</p>
                                 </div>
                             </td>
                             <td class="px-4 md:px-8 py-6 text-right" data-order="{{ item['jumlah_ktp'] }}">
@@ -191,7 +186,7 @@
                                 {% elif item['jumlah_ktp'] > 0 %}
                                 <div class="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-amber-50 text-amber-600 rounded-2xl border border-amber-100/50 shadow-sm">
                                     <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-                                    <span class="text-[0.6rem] md:text-[0.65rem] font-black uppercase tracking-wider">Limit</span>
+                                    <span class="text-[0.6rem] md:text-[0.65rem] font-black uppercase tracking-wider">Terbatas</span>
                                 </div>
                                 {% else %}
                                 <div class="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-rose-50 text-rose-600 rounded-2xl border border-rose-100/50 shadow-sm">

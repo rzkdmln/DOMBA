@@ -61,7 +61,7 @@
     
     .dataTables_wrapper .dataTables_paginate {
         display: flex !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
         justify-content: center !important;
         align-items: center !important;
         gap: 0.5rem !important;
@@ -70,6 +70,13 @@
         padding-right: 1.5rem !important;
         padding-bottom: 2.5rem !important;
         border-top: 1px solid #f8fafc !important;
+        overflow-x: auto !important;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .dataTables_wrapper .dataTables_paginate::-webkit-scrollbar {
+        display: none;
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -89,6 +96,7 @@
         box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
         cursor: pointer !important;
         margin: 0 !important;
+        flex-shrink: 0 !important;
     }
 
     .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
@@ -114,6 +122,27 @@
         display: flex !important;
         align-items: center !important;
         gap: 0.5rem !important;
+        flex-shrink: 0 !important;
+    }
+
+    @media (max-width: 640px) {
+        .dataTables_wrapper .dataTables_paginate {
+            gap: 0.35rem !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+            justify-content: flex-start !important; /* Aligns to start to allow horizontal scroll if too many pages */
+        }
+        
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            min-width: 38px !important;
+            height: 38px !important;
+            padding: 0 0.5rem !important;
+            border-radius: 0.6rem !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate span {
+            gap: 0.35rem !important;
+        }
     }
 
     .dataTables_wrapper .dataTables_info { display: none; }

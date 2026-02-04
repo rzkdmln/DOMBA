@@ -100,9 +100,10 @@
                     <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="0">Waktu Cetak <i class="fa-solid fa-sort ml-1"></i></th>
                     <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="1">Lokasi <i class="fa-solid fa-sort ml-1"></i></th>
                     <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="2">Data Penduduk <i class="fa-solid fa-sort ml-1"></i></th>
-                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="3">Hasil Cetak <i class="fa-solid fa-sort ml-1"></i></th>
-                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="4">Status Ambil <i class="fa-solid fa-sort ml-1"></i></th>
-                    <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="5">Operator <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-4 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="3">IKD <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="4">Hasil Cetak <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="5">Status Ambil <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="6">Operator <i class="fa-solid fa-sort ml-1"></i></th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -122,6 +123,13 @@
                             <span class="text-sm font-black text-slate-700">{{ item.nama_lengkap }}</span>
                             <span class="font-mono text-[11px] text-indigo-500 font-bold tracking-tighter mt-0.5">{{ item.nik }}</span>
                         </div>
+                    </td>
+                    <td class="px-4 py-5 text-center">
+                        {% if item.registrasi_ikd %}
+                            <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase border border-emerald-100">YA</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase border border-rose-100">TIDAK</span>
+                        {% endif %}
                     </td>
                     <td class="px-8 py-5 text-center">
                         <div class="flex flex-col items-center">
@@ -152,7 +160,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="px-8 py-12 text-center text-slate-400">Belum ada data cetak.</td>
+                    <td colspan="7" class="px-8 py-12 text-center text-slate-400">Belum ada data cetak.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -162,14 +170,14 @@
     <!-- Pagination Controls -->
     {% if pagination_info %}
     <div id="pagination-controls" class="px-8 py-6 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
-        <p class="text-xs font-medium text-slate-500 uppercase tracking-widest">
-            Menampilkan {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }} - {{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }} dokumen
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-tight">
+            {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
         </p>
         <div class="flex items-center space-x-2">
             {% if pagination_info.has_prev %}
             <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=pagination_info.prev_page, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
-               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">
-                <i class="fa-solid fa-chevron-left mr-1"></i>Sebelumnya
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
+                <i class="fa-solid fa-chevron-left"></i>
             </a>
             {% endif %}
             
@@ -206,8 +214,8 @@
             
             {% if pagination_info.has_next %}
             <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=pagination_info.next_page, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
-               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium">
-                Selanjutnya<i class="fa-solid fa-chevron-right ml-1"></i>
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
+                <i class="fa-solid fa-chevron-right"></i>
             </a>
             {% endif %}
         </div>

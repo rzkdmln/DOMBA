@@ -66,17 +66,36 @@ function resetPassword(button) {
         cancelButtonText: 'Batal'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch(`/admin/reset_password/${id}`, { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    Swal.fire(
-                        'Berhasil!',
-                        data.message,
-                        'success'
-                    ).then(() => {
-                        if (data.success) location.reload();
-                    });
+            // get CSRF token from any rendered form on the page
+            const csrfToken = document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '';
+
+            fetch(`/admin/reset_password/${id}`, { 
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    // Try to extract error message from response body
+                    return response.text().then(text => { throw { status: response.status, text }; });
+                }
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    return response.text().then(text => { throw { status: response.status, text }; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                    if (data.success) location.reload();
                 });
+            })
+            .catch(err => {
+                const message = err && err.text ? err.text : 'Terjadi kesalahan saat mereset password.';
+                Swal.fire('Error', message, 'error');
+            });
         }
     });
 }
