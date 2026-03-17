@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models import DetailCetak, Stok, Transaksi
 from sqlalchemy.orm import joinedload
 from app.utils import get_gmt7_time, validate_cetak_data, process_stok_pengurangan
+from app.forms import LaporPakaiForm
 from datetime import datetime, timedelta
 import pandas as pd
 from io import BytesIO
@@ -71,20 +72,15 @@ def export_my_cetak():
 @ops_bp.route('/lapor-pakai', methods=['GET', 'POST'])
 @login_required
 def lapor_pakai():
-    if request.method == 'POST':
-        nik = request.form.get('nik')
-        nama = request.form.get('nama_lengkap')
-        jenis_cetak = request.form.get('jenis_cetak')
-        registrasi_ikd_val = request.form.get('registrasi_ikd')
-        registrasi_ikd = registrasi_ikd_val == 'true' if registrasi_ikd_val is not None else None
-        status_cetak = request.form.get('status_cetak', 'BERHASIL')
-        keterangan_gagal = request.form.get('keterangan_gagal')
-        
-        # Validasi menggunakan utility
-        is_valid, error_msg = validate_cetak_data(nik, nama, jenis_cetak, registrasi_ikd_val)
-        if not is_valid and error_msg:
-            flash(error_msg, 'danger')
-            return redirect(url_for('operator.lapor_pakai'))
+    form = LaporPakaiForm()
+    
+    if form.validate_on_submit():
+        nik = form.nik.data
+        nama = form.nama_lengkap.data
+        jenis_cetak = form.jenis_cetak.data
+        registrasi_ikd = form.registrasi_ikd.data == 'true'
+        status_cetak = form.status_cetak.data
+        keterangan_gagal = form.keterangan_gagal.data
         
         # 1. Buat object detail cetak
         new_record = DetailCetak(
@@ -112,6 +108,13 @@ def lapor_pakai():
             flash(message, 'danger')
             
         return redirect(url_for('operator.lapor_pakai'))
+    elif request.method == 'POST':
+        # Flash first validation error
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{error}", 'danger')
+                break
+            break
 
     # GET request
     # Get pagination parameters

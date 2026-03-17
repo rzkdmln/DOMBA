@@ -101,11 +101,48 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Handle perPageSelect change
-document.getElementById('perPageSelect').addEventListener('change', function() {
-    const perPage = this.value;
+// Handle Unified Filtering (Live Search & Status)
+const applyFilters = () => {
     const url = new URL(window.location);
-    url.searchParams.set('per_page', perPage);
-    url.searchParams.set('page', '1'); // Reset to first page when changing per_page
+    const searchVal = document.getElementById('searchInput').value;
+    const statusVal = document.getElementById('statusFilter').value;
+    const perPageVal = document.getElementById('perPageSelect').value;
+
+    url.searchParams.set('search', searchVal);
+    url.searchParams.set('status', statusVal);
+    url.searchParams.set('per_page', perPageVal);
+    url.searchParams.set('page', '1');
+    
+    // Smooth transition
+    sessionStorage.setItem('dashboard_scroll_position', window.scrollY.toString());
     window.location.href = url.toString();
-});
+};
+
+// Debounce for Search Input
+let searchTimer;
+const debounceFilter = () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 600);
+};
+
+// Handle perPageSelect change
+const perPageSelect = document.getElementById('perPageSelect');
+if (perPageSelect) {
+    perPageSelect.addEventListener('change', applyFilters);
+}
+
+// Handle Search Input (Live Search)
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+    searchInput.addEventListener('input', debounceFilter);
+    // Also handle Enter as immediate
+    searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') applyFilters();
+    });
+}
+
+// Handle Status Filter Change
+const statusFilter = document.getElementById('statusFilter');
+if (statusFilter) {
+    statusFilter.addEventListener('change', applyFilters);
+}
