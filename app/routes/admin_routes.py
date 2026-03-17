@@ -2,8 +2,9 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user
 from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak
 from app.extensions import db
-from sqlalchemy import func
-from app.utils import get_gmt7_time, admin_required
+from sqlalchemy import func, or_
+from sqlalchemy.orm import joinedload
+from app.utils import get_gmt7_time, admin_required, validate_cetak_data, process_stok_pengurangan
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
@@ -40,70 +41,51 @@ def dashboard():
     total_users = User.query.count()
 
     # Get recent transactions (last 10)
-    recent_transactions = Transaksi.query.order_by(Transaksi.created_at.desc()).limit(10).all()
+    recent_transactions = Transaksi.query.options(joinedload(Transaksi.kecamatan), joinedload(Transaksi.user))\
+        .order_by(Transaksi.created_at.desc()).limit(10).all()
 
     # Get recent printing logs (last 10)
-    recent_cetaks = DetailCetak.query.order_by(DetailCetak.tanggal_cetak.desc()).limit(10).all()
+    recent_cetaks = DetailCetak.query.options(joinedload(DetailCetak.kecamatan), joinedload(DetailCetak.user))\
+        .order_by(DetailCetak.tanggal_cetak.desc()).limit(10).all()
 
     # Get stock levels for all kecamatan with pagination
+    stock_query = db.session.query(
+        Kecamatan.nama_kecamatan,
+        Stok.jumlah_ktp,
+        Stok.jumlah_kia,
+        Stok.last_updated
+    ).join(Stok)
+    
+    # Apply sorting
+    if sort_by == 'nama_kecamatan':
+        if sort_order == 'asc':
+            stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.asc())
+        else:
+            stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.desc())
+    elif sort_by == 'jumlah_ktp':
+        if sort_order == 'asc':
+            stock_query = stock_query.order_by(Stok.jumlah_ktp.asc())
+        else:
+            stock_query = stock_query.order_by(Stok.jumlah_ktp.desc())
+
     if per_page == 0:  # Show all
-        stock_query = db.session.query(
-            Kecamatan.nama_kecamatan,
-            Stok.jumlah_ktp,
-            Stok.jumlah_kia,
-            Stok.last_updated
-        ).join(Stok)
-        
-        # Apply sorting
-        if sort_by == 'nama_kecamatan':
-            if sort_order == 'asc':
-                stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.asc())
-            else:
-                stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.desc())
-        elif sort_by == 'jumlah_ktp':
-            if sort_order == 'asc':
-                stock_query = stock_query.order_by(Stok.jumlah_ktp.asc())
-            else:
-                stock_query = stock_query.order_by(Stok.jumlah_ktp.desc())
-        
         stock_data = stock_query.all()
-        total_stock_records = len(stock_data)
         pagination_info = None
     else:
-        # Paginated query
-        stock_query = db.session.query(
-            Kecamatan.nama_kecamatan,
-            Stok.jumlah_ktp,
-            Stok.jumlah_kia,
-            Stok.last_updated
-        ).join(Stok)
+        # Paginated query using Flask-SQLAlchemy paginate
+        pagination = stock_query.paginate(page=page, per_page=per_page, error_out=False)
+        stock_data = pagination.items
         
-        # Apply sorting
-        if sort_by == 'nama_kecamatan':
-            if sort_order == 'asc':
-                stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.asc())
-            else:
-                stock_query = stock_query.order_by(Kecamatan.nama_kecamatan.desc())
-        elif sort_by == 'jumlah_ktp':
-            if sort_order == 'asc':
-                stock_query = stock_query.order_by(Stok.jumlah_ktp.asc())
-            else:
-                stock_query = stock_query.order_by(Stok.jumlah_ktp.desc())
-        
-        total_stock_records = stock_query.count()
-        stock_data = stock_query.offset((page - 1) * per_page).limit(per_page).all()
-        
-        # Calculate pagination info
-        total_pages = (total_stock_records + per_page - 1) // per_page
+        # Format pagination info to match existing structure or pass pagination directly
         pagination_info = {
-            'page': page,
-            'per_page': per_page,
-            'total_pages': total_pages,
-            'total_records': total_stock_records,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if page < total_pages else None
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total_pages': pagination.pages,
+            'total_records': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num,
+            'next_page': pagination.next_num
         }
 
     # Get low stock alerts (less than 100 for either KTP or KIA) - from all data
@@ -155,12 +137,12 @@ def monitoring_cetak():
         per_page = 10
     
     # Build query with filters
-    cetaks_query = DetailCetak.query.join(User).join(Kecamatan)
+    cetaks_query = DetailCetak.query.options(joinedload(DetailCetak.user), joinedload(DetailCetak.kecamatan))
     
     # Apply search filter (name or NIK)
     if search:
         cetaks_query = cetaks_query.filter(
-            db.or_(
+            or_(
                 DetailCetak.nama_lengkap.ilike(f'%{search}%'),
                 DetailCetak.nik.ilike(f'%{search}%')
             )
@@ -191,24 +173,22 @@ def monitoring_cetak():
     # Get cetaks with pagination
     if per_page == 0:  # Show all
         cetaks = cetaks_query.all()
-        total_cetaks = len(cetaks)
         pagination_info = None
     else:
-        # Paginated query
-        total_cetaks = cetaks_query.count()
-        cetaks = cetaks_query.offset((page - 1) * per_page).limit(per_page).all()
+        # Paginated query using Flask-SQLAlchemy paginate
+        pagination = cetaks_query.paginate(page=page, per_page=per_page, error_out=False)
+        cetaks = pagination.items
         
-        # Calculate pagination info
-        total_pages = (total_cetaks + per_page - 1) // per_page
+        # Format pagination info to match existing structure
         pagination_info = {
-            'page': page,
-            'per_page': per_page,
-            'total_pages': total_pages,
-            'total_records': total_cetaks,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if page < total_pages else None
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total_pages': pagination.pages,
+            'total_records': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num,
+            'next_page': pagination.next_num
         }
     
     # Get filter options - include all kecamatans including dinas
@@ -231,9 +211,6 @@ def monitoring_cetak():
 @login_required
 @admin_required
 def lapor_pakai():
-    import re
-    from datetime import timedelta
-    
     # Ensure admin has a kecamatan_id (Dinas)
     if not current_user.kecamatan_id:
         dinas = Kecamatan.query.filter_by(kode_wilayah='32.05.00').first()
@@ -245,25 +222,18 @@ def lapor_pakai():
         nik = request.form.get('nik')
         nama = request.form.get('nama_lengkap')
         jenis_cetak = request.form.get('jenis_cetak')
-        registrasi_ikd = request.form.get('registrasi_ikd') == 'true'
+        registrasi_ikd_val = request.form.get('registrasi_ikd')
+        registrasi_ikd = registrasi_ikd_val == 'true' if registrasi_ikd_val is not None else None
         status_cetak = request.form.get('status_cetak', 'BERHASIL')
         keterangan_gagal = request.form.get('keterangan_gagal')
         
-        if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
-            flash('NIK, Nama Lengkap, Jenis Cetak, dan Status IKD wajib diisi!', 'danger')
+        # Validasi menggunakan utility
+        is_valid, error_msg = validate_cetak_data(nik, nama, jenis_cetak, registrasi_ikd_val)
+        if not is_valid and error_msg:
+            flash(error_msg, 'danger')
             return redirect(url_for('admin.lapor_pakai'))
         
-        # Validasi NIK: 16 digit angka
-        if not re.match(r'^\d{16}$', nik):
-            flash('NIK harus terdiri dari 16 digit angka!', 'danger')
-            return redirect(url_for('admin.lapor_pakai'))
-        
-        # Validasi Nama Lengkap: huruf kapital, spasi, dash, kutip
-        if not re.match(r'^[A-Z\s\'\-]+$', nama):
-            flash('Nama Lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
-            return redirect(url_for('admin.lapor_pakai'))
-        
-        # 1. Simpan detail cetak
+        # 1. Buat object detail cetak
         new_record = DetailCetak(
             nik=nik,
             nama_lengkap=nama,
@@ -275,28 +245,18 @@ def lapor_pakai():
             keterangan_gagal=keterangan_gagal if status_cetak == 'GAGAL' else None
         )
         
-        # 2. Kurangi stok KTP
-        stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
-        if stok and stok.jumlah_ktp > 0:
-            stok.jumlah_ktp -= 1
-            
-            # 3. Catat di Transaksi for audit trail
-            jenis_trans = 'CETAK' if status_cetak == 'BERHASIL' else 'RUSAK'
-            transaksi = Transaksi(
-                kecamatan_id=current_user.kecamatan_id,
-                user_id=current_user.id,
-                jenis_transaksi=jenis_trans,
-                jumlah_ktp=1,
-                jumlah_kia=0
-            )
-            
-            db.session.add(new_record)
-            db.session.add(transaksi)
-            db.session.commit()
-            
-            flash(f'Berhasil mencatat pencetakan KTP-el untuk {nama}', 'success')
+        # 2. Proses stok dan transaksi menggunakan utility
+        success, message = process_stok_pengurangan(
+            current_user.kecamatan_id, 
+            current_user.id, 
+            status_cetak, 
+            new_record
+        )
+        
+        if success:
+            flash(message, 'success')
         else:
-            flash('Gagal! Stok KTP-el tidak mencukupi.', 'danger')
+            flash(message, 'danger')
             
         return redirect(url_for('admin.lapor_pakai'))
 
@@ -307,19 +267,19 @@ def lapor_pakai():
     history_query = DetailCetak.query.filter(DetailCetak.status_ambil == False)\
         .order_by(DetailCetak.tanggal_cetak.desc())
     
-    total_cetak = history_query.count()
-    history = history_query.offset((page - 1) * per_page).limit(per_page).all()
+    pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+    history = pagination.items
+    total_cetak = pagination.total
     
-    total_pages = (total_cetak + per_page - 1) // per_page
     pagination_info = {
-        'page': page,
-        'per_page': per_page,
-        'total_pages': total_pages,
-        'total_records': total_cetak,
-        'has_prev': page > 1,
-        'has_next': page < total_pages,
-        'prev_page': page - 1 if page > 1 else None,
-        'next_page': page + 1 if page < total_pages else None
+        'page': pagination.page,
+        'per_page': pagination.per_page,
+        'total_pages': pagination.pages,
+        'total_records': pagination.total,
+        'has_prev': pagination.has_prev,
+        'has_next': pagination.has_next,
+        'prev_page': pagination.prev_num,
+        'next_page': pagination.next_num
     }
         
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
@@ -623,24 +583,22 @@ def master_user():
     # Get users with pagination
     if per_page == 0:  # Show all
         users = users_query.all()
-        total_users = len(users)
         pagination_info = None
     else:
-        # Paginated query
-        total_users = users_query.count()
-        users = users_query.offset((page - 1) * per_page).limit(per_page).all()
+        # Paginated query using Flask-SQLAlchemy paginate
+        pagination = users_query.paginate(page=page, per_page=per_page, error_out=False)
+        users = pagination.items
         
-        # Calculate pagination info
-        total_pages = (total_users + per_page - 1) // per_page
+        # Format pagination info
         pagination_info = {
-            'page': page,
-            'per_page': per_page,
-            'total_pages': total_pages,
-            'total_records': total_users,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if page < total_pages else None
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total_pages': pagination.pages,
+            'total_records': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num,
+            'next_page': pagination.next_num
         }
     
     kecamatans = Kecamatan.query.filter(Kecamatan.kode_wilayah != '32.05.00').all()
@@ -883,11 +841,11 @@ def delete_stok_masuk(transaksi_id):
         flash('Transaksi ini tidak bisa dihapus.', 'danger')
         return redirect(url_for('admin.stok_masuk'))
     
-    # Kurangi stok Gudang Dinas
+    # Kurangi stok Gudang Dinas secara atomik
     dinas = Kecamatan.query.filter_by(kode_wilayah='32.05.00').first()
     stok_dinas = Stok.query.filter_by(kecamatan_id=dinas.id).first()
     if stok_dinas:
-        stok_dinas.jumlah_ktp -= transaksi.jumlah_ktp
+        stok_dinas.jumlah_ktp = Stok.jumlah_ktp - transaksi.jumlah_ktp
     
     db.session.delete(transaksi)
     db.session.commit()
@@ -917,16 +875,16 @@ def distribusi():
             flash(f'Stok di Dinas tidak mencukupi (Sisa: {stok_dinas.jumlah_ktp if stok_dinas else 0}).', 'danger')
             return redirect(url_for('admin.distribusi'))
         
-        # 1. Kurangi Stok Gudang Dinas
-        stok_dinas.jumlah_ktp -= jumlah
+        # 1. Kurangi Stok Gudang Dinas secara atomik
+        stok_dinas.jumlah_ktp = Stok.jumlah_ktp - jumlah
         
-        # 2. Tambah Stok Kecamatan Tujuan
+        # 2. Tambah Stok Kecamatan Tujuan secara atomik
         stok_tujuan = Stok.query.filter_by(kecamatan_id=kecamatan_id).first()
         if not stok_tujuan:
-            stok_tujuan = Stok(kecamatan_id=kecamatan_id, jumlah_ktp=0)
+            stok_tujuan = Stok(kecamatan_id=kecamatan_id, jumlah_ktp=jumlah)
             db.session.add(stok_tujuan)
-        
-        stok_tujuan.jumlah_ktp += jumlah
+        else:
+            stok_tujuan.jumlah_ktp = Stok.jumlah_ktp + jumlah
         
         # 3. Add Transaksi Log (DISTRIBUSI_TO_KEC)
         transaksi = Transaksi(
@@ -940,7 +898,8 @@ def distribusi():
         db.session.add(transaksi)
         db.session.commit()
         
-        flash(f'Berhasil mendistribusikan {jumlah} blangko ke {stok_tujuan.kecamatan.nama_kecamatan}', 'success')
+        target_name = Kecamatan.query.get(kecamatan_id).nama_kecamatan
+        flash(f'Berhasil mendistribusikan {jumlah} blangko ke {target_name}', 'success')
         return redirect(url_for('admin.distribusi'))
 
     # Filter out Gudang Dinas from target kecamatan list
@@ -1044,20 +1003,20 @@ def distribusi():
             else:
                 stock_query = stock_query.order_by(Stok.jumlah_ktp.desc())
         
-        total_stock_records = stock_query.count()
-        stock_data = stock_query.offset((page - 1) * per_page).limit(per_page).all()
+        # Paginated query using Flask-SQLAlchemy paginate
+        pagination = stock_query.paginate(page=page, per_page=per_page, error_out=False)
+        stock_data = pagination.items
         
-        # Calculate pagination info
-        total_pages = (total_stock_records + per_page - 1) // per_page
+        # Format pagination info
         pagination_info = {
-            'page': page,
-            'per_page': per_page,
-            'total_pages': total_pages,
-            'total_records': total_stock_records,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if page < total_pages else None
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total_pages': pagination.pages,
+            'total_records': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num,
+            'next_page': pagination.next_num
         }
 
     # Get low stock alerts (less than 100 for either KTP or KIA) - from all data

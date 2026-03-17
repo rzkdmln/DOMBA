@@ -62,19 +62,6 @@ def create_app(config_class=Config):
     from app.routes.admin_routes import admin_bp
     from app.routes.ops_routes import ops_bp
 
-    # Ensure existing 'Gudang Dinas (Pusat)' entries are normalized to 'Dinas'
-    try:
-        with app.app_context():
-            from app.models import Kecamatan
-            existing = Kecamatan.query.filter_by(nama_kecamatan='Gudang Dinas (Pusat)').first()
-            if existing:
-                existing.nama_kecamatan = 'Dinas'
-                from app.extensions import db as _db
-                _db.session.commit()
-    except Exception:
-        # Do not break app startup if DB isn't available (e.g., during initial setup)
-        pass
-
     app.register_blueprint(public_bp) # URL: /
     app.register_blueprint(auth_bp, url_prefix='/auth') # URL: /auth/login
     app.register_blueprint(admin_bp, url_prefix='/admin') # URL: /admin/dashboard
@@ -109,16 +96,8 @@ def create_app(config_class=Config):
     def init_db_command():
         """Membersihkan data lama dan membuat tabel baru."""
         click.echo("Menghapus tabel lama...")
-        # Force drop all tables
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            conn.execute(text("DROP TABLE IF EXISTS detail_cetak CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS transaksi CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS stok CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS \"user\" CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS kecamatan CASCADE"))
-            conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
-            conn.commit()
+        # Gunakan Flask-SQLAlchemy drop_all() yang lebih portable
+        db.drop_all()
         
         from app.models import Kecamatan, User, Stok, Transaksi, DetailCetak
         db.create_all()

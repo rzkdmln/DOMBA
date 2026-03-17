@@ -3,7 +3,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_required, current_user  # type: ignore
 from app.extensions import db
 from app.models import DetailCetak, Stok, Transaksi
-from app.utils import get_gmt7_time
+from sqlalchemy.orm import joinedload
+from app.utils import get_gmt7_time, validate_cetak_data, process_stok_pengurangan
 from datetime import datetime, timedelta
 import pandas as pd
 from io import BytesIO
@@ -18,16 +19,18 @@ def dashboard():
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
     
     # Ambil 5 cetakan terakhir (dibatasi untuk dashboard)
-    recent_cetak = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)\
+    recent_cetak = DetailCetak.query.options(joinedload(DetailCetak.user), joinedload(DetailCetak.kecamatan))\
+        .filter_by(kecamatan_id=current_user.kecamatan_id)\
         .order_by(DetailCetak.tanggal_cetak.desc()).limit(5).all()
         
-    # Hitung total cetak hari ini
+    # Hitung total hari ini
     today = get_gmt7_time().date()
     total_hari_ini = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)\
         .filter(db.func.date(DetailCetak.tanggal_cetak) == today).count()
 
     # Ambil 5 transaksi terakhir untuk kecamatan ini (dibatasi untuk dashboard)
-    recent_transactions = Transaksi.query.filter_by(kecamatan_id=current_user.kecamatan_id)\
+    recent_transactions = Transaksi.query.options(joinedload(Transaksi.user), joinedload(Transaksi.kecamatan))\
+        .filter_by(kecamatan_id=current_user.kecamatan_id)\
         .order_by(Transaksi.created_at.desc()).limit(5).all()
 
     return render_template('operator/dashboard.html', 
@@ -72,25 +75,18 @@ def lapor_pakai():
         nik = request.form.get('nik')
         nama = request.form.get('nama_lengkap')
         jenis_cetak = request.form.get('jenis_cetak')
-        registrasi_ikd = request.form.get('registrasi_ikd') == 'true'
+        registrasi_ikd_val = request.form.get('registrasi_ikd')
+        registrasi_ikd = registrasi_ikd_val == 'true' if registrasi_ikd_val is not None else None
         status_cetak = request.form.get('status_cetak', 'BERHASIL')
         keterangan_gagal = request.form.get('keterangan_gagal')
         
-        if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
-            flash('NIK, Nama Lengkap, Jenis Cetak, dan Status IKD wajib diisi!', 'danger')
+        # Validasi menggunakan utility
+        is_valid, error_msg = validate_cetak_data(nik, nama, jenis_cetak, registrasi_ikd_val)
+        if not is_valid and error_msg:
+            flash(error_msg, 'danger')
             return redirect(url_for('operator.lapor_pakai'))
         
-        # Validasi NIK: 16 digit angka
-        if not re.match(r'^\d{16}$', nik):
-            flash('NIK harus terdiri dari 16 digit angka!', 'danger')
-            return redirect(url_for('operator.lapor_pakai'))
-        
-        # Validasi Nama Lengkap: huruf kapital, spasi, dash, kutip
-        if not re.match(r'^[A-Z\s\'\-]+$', nama):
-            flash('Nama Lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
-            return redirect(url_for('operator.lapor_pakai'))
-        
-        # 1. Simpan detail cetak
+        # 1. Buat object detail cetak
         new_record = DetailCetak(
             nik=nik,
             nama_lengkap=nama,
@@ -102,32 +98,18 @@ def lapor_pakai():
             keterangan_gagal=keterangan_gagal if status_cetak == 'GAGAL' else None
         )
         
-        # 2. Kurangi stok KTP (Asumsi lapor pakai ini khusus KTP-el)
-        stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
-        if stok and stok.jumlah_ktp > 0:
-            stok.jumlah_ktp -= 1
-            
-            # 3. Catat di Transaksi untuk audit trail
-            jenis_trans = 'CETAK' if status_cetak == 'BERHASIL' else 'RUSAK'
-            transaksi = Transaksi(
-                kecamatan_id=current_user.kecamatan_id,
-                user_id=current_user.id,
-                jenis_transaksi=jenis_trans,
-                jumlah_ktp=1,
-                jumlah_kia=0
-            )
-            
-            db.session.add(new_record)
-            db.session.add(transaksi)
-            db.session.commit()
-            
-            msg = f'Berhasil mencatat pencetakan KTP-el untuk {nama}'
-            if status_cetak == 'GAGAL':
-                msg = f'Berhasil mencatat KTP-el GAGAL/RUSAK untuk {nama}'
-            
-            flash(msg, 'success')
+        # 2. Proses stok dan transaksi menggunakan utility (Asumsi lapor pakai ini khusus KTP-el)
+        success, message = process_stok_pengurangan(
+            current_user.kecamatan_id, 
+            current_user.id, 
+            status_cetak, 
+            new_record
+        )
+        
+        if success:
+            flash(message, 'success')
         else:
-            flash('Gagal! Stok KTP-el tidak mencukupi atau tidak ditemukan.', 'danger')
+            flash(message, 'danger')
             
         return redirect(url_for('operator.lapor_pakai'))
 
@@ -140,25 +122,26 @@ def lapor_pakai():
     if per_page not in [10, 20, 50]:  # Only allow these options for operator
         per_page = 10
     
-    # Get history with pagination
+    # Define history_query before pagination
     history_query = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)\
         .filter(DetailCetak.status_ambil == False)\
         .order_by(DetailCetak.tanggal_cetak.desc())
     
-    total_cetak = history_query.count()
-    history = history_query.offset((page - 1) * per_page).limit(per_page).all()
+    # Get history with pagination using Flask-SQLAlchemy paginate
+    pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
+    history = pagination.items
+    total_cetak = pagination.total
     
-    # Calculate pagination info
-    total_pages = (total_cetak + per_page - 1) // per_page
+    # Format pagination info to match existing structure
     pagination_info = {
-        'page': page,
-        'per_page': per_page,
-        'total_pages': total_pages,
-        'total_records': total_cetak,
-        'has_prev': page > 1,
-        'has_next': page < total_pages,
-        'prev_page': page - 1 if page > 1 else None,
-        'next_page': page + 1 if page < total_pages else None
+        'page': pagination.page,
+        'per_page': pagination.per_page,
+        'total_pages': pagination.pages,
+        'total_records': pagination.total,
+        'has_prev': pagination.has_prev,
+        'has_next': pagination.has_next,
+        'prev_page': pagination.prev_num,
+        'next_page': pagination.next_num
     }
         
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
@@ -182,7 +165,8 @@ def monitoring_cetak():
         per_page = 10
     
     # Build query filtered by current user's kecamatan
-    cetaks_query = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)
+    cetaks_query = DetailCetak.query.options(joinedload(DetailCetak.user), joinedload(DetailCetak.kecamatan))\
+        .filter_by(kecamatan_id=current_user.kecamatan_id)
     
     # Apply search filter
     if search:
@@ -210,22 +194,22 @@ def monitoring_cetak():
     # Get cetaks with pagination
     if per_page == 0:
         cetaks = cetaks_query.all()
-        total_cetaks = len(cetaks)
         pagination_info = None
     else:
-        total_cetaks = cetaks_query.count()
-        cetaks = cetaks_query.offset((page - 1) * per_page).limit(per_page).all()
+        # Paginated query using Flask-SQLAlchemy paginate
+        pagination = cetaks_query.paginate(page=page, per_page=per_page, error_out=False)
+        cetaks = pagination.items
         
-        total_pages = (total_cetaks + per_page - 1) // per_page
+        # Format pagination info to match existing structure
         pagination_info = {
-            'page': page,
-            'per_page': per_page,
-            'total_pages': total_pages,
-            'total_records': total_cetaks,
-            'has_prev': page > 1,
-            'has_next': page < total_pages,
-            'prev_page': page - 1 if page > 1 else None,
-            'next_page': page + 1 if page < total_pages else None
+            'page': pagination.page,
+            'per_page': pagination.per_page,
+            'total_pages': pagination.pages,
+            'total_records': pagination.total,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_page': pagination.prev_num,
+            'next_page': pagination.next_num
         }
     
     return render_template('admin/monitoring_cetak.html', 
