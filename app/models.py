@@ -1,7 +1,13 @@
 from app.extensions import db
-from flask_login import UserMixin
+from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from app.utils import get_gmt7_time
+
+try:
+    from flask_login import UserMixin
+except ImportError:
+    class UserMixin:
+        pass
 
 class Kecamatan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
