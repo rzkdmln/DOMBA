@@ -5,17 +5,6 @@
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Header Actions -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-extrabold text-slate-800">Daftar Pengguna</h2>
-            <p class="text-slate-500 text-sm italic">Kelola akun administrator dan operator kecamatan.</p>
-        </div>
-        <button id="addUserBtn" onclick="openAddModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center">
-            <i class="fa-solid fa-user-plus mr-2"></i> Tambah User Baru
-        </button>
-    </div>
-
     <!-- Stats Overview -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center">
@@ -50,14 +39,17 @@
     <!-- Table Card -->
     <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
         <div class="p-6 border-b border-slate-50">
-            <div class="flex flex-wrap items-center justify-between gap-4">
-                <div class="relative w-full md:w-96">
+            <div class="flex flex-col lg:flex-row lg:items-center gap-4">
+                <!-- Search Input (Left) -->
+                <div class="relative flex-1">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
                     <input id="searchInput" type="text" placeholder="Cari berdasarkan nama atau username..." 
                            value="{{ search }}"
                            class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm shadow-sm"
                            autocomplete="off">
                 </div>
+
+                <!-- Filters (Center) -->
                 <div class="flex items-center gap-3">
                     <div class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
                         <i class="fa-solid fa-filter text-slate-400 text-xs"></i>
@@ -77,6 +69,11 @@
                         </select>
                     </div>
                 </div>
+
+                <!-- Add Button (Right) -->
+                <button id="addUserBtn" onclick="openAddModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center justify-center whitespace-nowrap">
+                    <i class="fa-solid fa-user-plus mr-2"></i> Tambah User Baru
+                </button>
             </div>
         </div>
 

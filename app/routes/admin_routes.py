@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
-from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak
+from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak, BackupSchedule, BackupLog
 from app.extensions import db
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
@@ -9,6 +9,10 @@ from app.forms import LaporPakaiForm
 import pandas as pd
 from io import BytesIO
 from datetime import datetime
+import json
+import os
+from werkzeug.utils import secure_filename
+from apscheduler.triggers.cron import CronTrigger
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -196,10 +200,10 @@ def monitoring_cetak():
                          operator_filter=operator_filter,
                          is_operator=False)
 
-@admin_bp.route('/lapor-pakai', methods=['GET', 'POST'])
+@admin_bp.route('/input-data', methods=['GET', 'POST'])
 @login_required
 @admin_required
-def lapor_pakai():
+def input_data():
     form = LaporPakaiForm()
     
     # Ensure admin has a kecamatan_id (Dinas)
@@ -242,7 +246,7 @@ def lapor_pakai():
         else:
             flash(message, 'danger')
             
-        return redirect(url_for('admin.lapor_pakai'))
+        return redirect(url_for('admin.input_data'))
     elif request.method == 'POST':
         # Flash first validation error if exists
         for field, errors in form.errors.items():
@@ -254,9 +258,17 @@ def lapor_pakai():
     # GET request
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
+    status_filter = request.args.get('status', 'pending')
     
-    history_query = DetailCetak.query.filter(DetailCetak.status_ambil == False)\
-        .order_by(DetailCetak.tanggal_cetak.desc())
+    # Define history_query based on status filter
+    history_query = DetailCetak.query
+    
+    if status_filter == 'taken':
+        history_query = history_query.filter(DetailCetak.status_ambil == True)
+    else:
+        history_query = history_query.filter(DetailCetak.status_ambil == False)
+    
+    history_query = history_query.order_by(DetailCetak.tanggal_cetak.desc())
     
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
     history = pagination.items
@@ -275,7 +287,7 @@ def lapor_pakai():
         
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
     
-    return render_template('operator/lapor_pakai.html', 
+    return render_template('internal/input_data.html', 
                          history=history, 
                          stok=stok, 
                          total_cetak=total_cetak, 
@@ -299,7 +311,7 @@ def update_status_ambil(id):
     
     if not penerima or not re.match(r'^[A-Z\s\'\-]+$', penerima):
         flash('Nama pengambil tidak valid!', 'danger')
-        return redirect(url_for('admin.lapor_pakai'))
+        return redirect(url_for('admin.input_data'))
     
     record.status_ambil = status
     record.hubungan = hubungan
@@ -314,7 +326,7 @@ def update_status_ambil(id):
     
     db.session.commit()
     flash('Status pengambilan diperbarui', 'success')
-    return redirect(url_for('admin.lapor_pakai'))
+    return redirect(url_for('admin.input_data'))
 
 @admin_bp.route('/update-cetak/<int:id>', methods=['POST'])
 @login_required
@@ -336,7 +348,7 @@ def update_cetak(id):
     
     if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
         flash('Semua field wajib diisi, termasuk status Registrasi IKD!', 'danger')
-        return redirect(url_for('admin.lapor_pakai'))
+        return redirect(url_for('admin.input_data'))
     
     record.nik = nik
     record.nama_lengkap = nama
@@ -362,7 +374,7 @@ def update_cetak(id):
 
     db.session.commit()
     flash('Data cetakan diperbarui', 'success')
-    return redirect(url_for('admin.lapor_pakai'))
+    return redirect(url_for('admin.input_data'))
 
 @admin_bp.route('/delete-cetak/<int:id>')
 @login_required
@@ -378,7 +390,7 @@ def delete_cetak(id):
     db.session.delete(record)
     db.session.commit()
     flash('Data cetakan dihapus', 'success')
-    return redirect(url_for('admin.lapor_pakai'))
+    return redirect(url_for('admin.input_data'))
 
 @admin_bp.route('/export-sebaran-stok')
 @login_required
@@ -1164,4 +1176,373 @@ def update_stock():
     
     flash(f'Stok blangko untuk {stok.kecamatan.nama_kecamatan} berhasil diperbarui menjadi {jumlah_ktp} keping.', 'success')
     return redirect(url_for('admin.distribusi'))
+
+# ============================================================================
+# DISASTER RECOVERY & BACKUP MANAGEMENT ENDPOINTS
+# ============================================================================
+# All backup endpoints are restricted to admin_dinas role only (@admin_required)
+# Implementasi: Backup/Restore database dengan tracking & scheduling
+
+@admin_bp.route('/backup')
+@login_required
+@admin_required
+def backup_dashboard():
+    """
+    Main backup & restore management dashboard.
+    Displays backup history, scheduling config, and upload area.
+    """
+    from app.models import BackupLog, BackupSchedule
+    
+    try:
+        # Get backup history (latest 30)
+        backups = BackupLog.query.filter(
+            BackupLog.operation == 'BACKUP',
+            BackupLog.status.in_(['SUCCESS', 'VERIFIED'])
+        ).order_by(BackupLog.created_at.desc()).limit(30).all()
+        
+        # Get schedule configuration
+        schedule = BackupSchedule.query.first()
+        if not schedule:
+            schedule = BackupSchedule(
+                enabled=False,
+                days_of_week='[0]',
+                execution_time='02:00',
+                backup_format='sql',
+                retention_days=30
+            )
+            db.session.add(schedule)
+            db.session.commit()
+        
+        import json
+        days_enabled = json.loads(schedule.days_of_week) if schedule.days_of_week else [0]
+        
+        day_names = {0: 'Senin', 1: 'Selasa', 2: 'Rabu', 3: 'Kamis', 4: 'Jumat', 5: 'Sabtu', 6: 'Minggu'}
+        selected_days = [day_names.get(d, '') for d in days_enabled if 0 <= d < 7]
+        
+        return render_template('admin/backup.html',
+                             backups=backups,
+                             schedule=schedule,
+                             selected_days=', '.join(selected_days),
+                             retention_days=schedule.retention_days)
+    
+    except Exception as e:
+        flash(f'Error loading backup dashboard: {str(e)}', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route('/backup/create', methods=['POST'])
+@login_required
+@admin_required
+def backup_create():
+    """
+    Trigger manual database backup in specified format.
+    
+    POST params:
+    - format: 'sql' or 'binary'
+    """
+    from app.services.backup_service import BackupService
+    
+    try:
+        backup_format = request.form.get('format', 'sql')
+        if backup_format not in ['sql', 'binary']:
+            return {'success': False, 'error': 'Invalid format'}, 400
+        
+        service = BackupService()
+        result = service.backup_database(format=backup_format, created_by_id=current_user.id)
+        
+        if result['success']:
+            flash(f"✓ Backup berhasil dibuat: {result['filename']} ({result['message']})", 'success')
+            return redirect(url_for('admin.backup_dashboard'))
+        else:
+            flash(f"✗ Backup gagal: {result['error']}", 'danger')
+            return redirect(url_for('admin.backup_dashboard'))
+    
+    except Exception as e:
+        flash(f"Error creating backup: {str(e)}", 'danger')
+        return redirect(url_for('admin.backup_dashboard'))
+
+@admin_bp.route('/backup/restore/<int:backup_id>', methods=['POST'])
+@login_required
+@admin_required
+def backup_restore(backup_id):
+    """
+    Restore database from a specific backup file.
+    WARNING: Destructive operation - requires confirmation.
+    
+    Expected: User confirms before reaching this endpoint.
+    """
+    from app.models import BackupLog
+    from app.services.backup_service import BackupService
+    
+    try:
+        backup = BackupLog.query.get_or_404(backup_id)
+        
+        if backup.operation != 'BACKUP':
+            flash('Invalid backup record', 'danger')
+            return redirect(url_for('admin.backup_dashboard'))
+        
+        service = BackupService()
+        result = service.restore_database(backup.file_path, created_by_id=current_user.id)
+        
+        if result['success']:
+            flash(f"✓ Database restored from {backup.filename}", 'success')
+        else:
+            flash(f"✗ Restore failed: {result['error']}", 'danger')
+        
+        return redirect(url_for('admin.backup_dashboard'))
+    
+    except Exception as e:
+        flash(f"Error restoring backup: {str(e)}", 'danger')
+        return redirect(url_for('admin.backup_dashboard'))
+
+@admin_bp.route('/backup/upload', methods=['POST'])
+@login_required
+@admin_required
+def backup_upload():
+    """
+    Upload backup file from external source for migration/restore.
+    
+    Accepts: .sql, .bak files
+    Max size: Based on environment (default 1GB)
+    """
+    from app.models import BackupLog
+    import os
+    from werkzeug.utils import secure_filename
+    
+    try:
+        if 'backup_file' not in request.files:
+            return {'success': False, 'error': 'No file provided'}, 400
+        
+        file = request.files['backup_file']
+        if not file.filename or file.filename == '':
+            return {'success': False, 'error': 'No file selected'}, 400
+        
+        # Validate file extension
+        allowed_extensions = {'sql', 'bak'}
+        if '.' not in file.filename or file.filename.rsplit('.', 1)[1].lower() not in allowed_extensions:
+            return {'success': False, 'error': 'Only .sql and .bak files allowed'}, 400
+        
+        # Create backups directory
+        backup_dir = os.environ.get('BACKUP_LOCATION', './backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # Save file with timestamp prefix
+        timestamp = get_gmt7_time().strftime('%Y%m%d_%H%M%S')
+        filename = f"upload_external_{timestamp}_{secure_filename(file.filename)}"
+        file_path = os.path.join(backup_dir, filename)
+        file.save(file_path)
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+        # Log upload
+        from app.models import BackupLog
+        log_entry = BackupLog(
+            filename=filename,
+            file_path=file_path,
+            file_size=file_size,
+            backup_type='binary' if filename.endswith('.bak') else 'sql',
+            status='VERIFIED',
+            operation='BACKUP',  # Mark as backup for history
+            created_by_id=current_user.id
+        )
+        db.session.add(log_entry)
+        db.session.commit()
+        
+        flash(f"✓ File uploaded successfully: {filename} ({file_size / (1024*1024):.2f} MB)", 'success')
+        return redirect(url_for('admin.backup_dashboard'))
+    
+    except Exception as e:
+        flash(f"Upload error: {str(e)}", 'danger')
+        return redirect(url_for('admin.backup_dashboard'))
+
+@admin_bp.route('/backup/delete/<int:backup_id>', methods=['POST'])
+@login_required
+@admin_required
+def backup_delete(backup_id):
+    """
+    Delete a backup file and its log record.
+    """
+    from app.models import BackupLog
+    import os
+    
+    try:
+        backup = BackupLog.query.get_or_404(backup_id)
+        file_path = backup.file_path
+        
+        # Delete file from disk
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        
+        # Delete log record
+        db.session.delete(backup)
+        db.session.commit()
+        
+        flash(f"✓ Backup deleted: {backup.filename}", 'success')
+        return redirect(url_for('admin.backup_dashboard'))
+    
+    except Exception as e:
+        flash(f"Delete error: {str(e)}", 'danger')
+        return redirect(url_for('admin.backup_dashboard'))
+
+@admin_bp.route('/backup/api/list', methods=['GET'])
+@login_required
+@admin_required
+def backup_api_list():
+    """
+    API endpoint returning backup history as JSON.
+    Used for AJAX refresh without page reload.
+    """
+    from app.models import BackupLog
+    from datetime import datetime
+    
+    try:
+        backups = BackupLog.query.filter(
+            BackupLog.operation == 'BACKUP',
+            BackupLog.status.in_(['SUCCESS', 'VERIFIED'])
+        ).order_by(BackupLog.created_at.desc()).limit(50).all()
+        
+        data = []
+        for backup in backups:
+            file_size_mb = backup.file_size / (1024 * 1024)
+            data.append({
+                'id': backup.id,
+                'filename': backup.filename,
+                'file_size': f"{file_size_mb:.2f} MB",
+                'backup_type': backup.backup_type,
+                'status': backup.status,
+                'created_at': backup.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                'created_by': backup.created_by.username if backup.created_by else 'System'
+            })
+        
+        return {'success': True, 'data': data}, 200
+    
+    except Exception as e:
+        return {'success': False, 'error': str(e)}, 500
+
+@admin_bp.route('/backup/schedule', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def backup_schedule():
+    """
+    Configure automated backup schedule.
+    
+    POST params (from schedule form):
+    - enabled: 'on' (checkbox) or absent
+    - days_of_week: list of day indices (0-6)
+    - execution_time: HH:MM format
+    - backup_format: 'sql' or 'binary'
+    - retention_days: integer
+    """
+    from app.models import BackupSchedule
+    import json
+    
+    if request.method == 'POST':
+        try:
+            schedule = BackupSchedule.query.first()
+            if not schedule:
+                schedule = BackupSchedule()
+            
+            # Parse form data
+            schedule.enabled = 'enabled' in request.form
+            schedule.execution_time = request.form.get('execution_time', '02:00')
+            schedule.backup_format = request.form.get('backup_format', 'sql')
+            schedule.retention_days = int(request.form.get('retention_days', 30))
+            
+            # Days selected (from checkboxes with name="days")
+            days_selected = request.form.getlist('days')
+            schedule.days_of_week = json.dumps([int(d) for d in days_selected if d.isdigit()])
+            
+            schedule.updated_at = get_gmt7_time()
+            db.session.add(schedule)
+            db.session.commit()
+            
+            # Reschedule the backup job in APScheduler
+            from app.extensions import scheduler
+            try:
+                # Remove existing job
+                for job in scheduler.get_jobs():
+                    if job.name == 'scheduled_backup':
+                        scheduler.remove_job(job.id)
+                
+                if schedule.enabled:
+                    # Re-register backup job
+                    days = json.loads(schedule.days_of_week)
+                    if days:
+                        hour, minute = map(int, schedule.execution_time.split(':'))
+                        day_names = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+                        triggered_days = [day_names[d] for d in days if 0 <= d < 7]
+                        
+                        if triggered_days:
+                            trigger = CronTrigger(
+                                day_of_week=','.join(triggered_days),
+                                hour=hour,
+                                minute=minute,
+                                timezone='Asia/Jakarta'
+                            )
+                            scheduler.add_job(
+                                _scheduled_backup_task,
+                                trigger=trigger,
+                                id='scheduled_backup',
+                                name='scheduled_backup',
+                                replace_existing=True
+                            )
+            except Exception as e:
+                print(f"Scheduler reschedule error: {e}")
+            
+            status_text = "Jadwal backup aktif" if schedule.enabled else "Jadwal backup dinonaktifkan"
+            flash(f"✓ {status_text}: {schedule.execution_time}, Format: {schedule.backup_format}", 'success')
+            return redirect(url_for('admin.backup_dashboard'))
+        
+        except Exception as e:
+            flash(f"Schedule update error: {str(e)}", 'danger')
+            return redirect(url_for('admin.backup_dashboard'))
+    
+    return redirect(url_for('admin.backup_dashboard'))
+
+# ============================================================================
+# BACKGROUND TASK: Scheduled Backup Execution
+# ============================================================================
+
+def _scheduled_backup_task():
+    """
+    Background task executed by APScheduler at configured times.
+    Runs backup_database() and logs result.
+    
+    This function is called by the scheduler, NOT by user action.
+    Runs with application context to access database.
+    """
+    from app.services.backup_service import BackupService
+    from app import create_app
+    from config import Config
+    
+    try:
+        # Create app context for database access
+        app = create_app(Config)
+        with app.app_context():
+            from app.models import BackupSchedule
+            
+            # Get schedule to check format
+            schedule = BackupSchedule.query.first()
+            backup_format = schedule.backup_format if schedule else 'sql'
+            
+            # Execute backup
+            service = BackupService()
+            result = service.backup_database(
+                format=backup_format,
+                created_by_id=None  # System-initiated backup (no user ID)
+            )
+            
+            if result['success']:
+                print(f"[SCHEDULED BACKUP] ✓ Success: {result['filename']} ({result['message']})")
+            else:
+                print(f"[SCHEDULED BACKUP] ✗ Failed: {result['error']}")
+            
+            # Run cleanup if schedule exists
+            if schedule:
+                cleanup_result = service.cleanup_old_backups(retention_days=schedule.retention_days)
+                if cleanup_result['deleted_count'] > 0:
+                    print(f"[SCHEDULED BACKUP CLEANUP] Deleted {cleanup_result['deleted_count']} old backups")
+    
+    except Exception as e:
+        print(f"[SCHEDULED BACKUP] ERROR: {str(e)}")
 

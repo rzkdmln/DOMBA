@@ -1,3 +1,11 @@
+function openAddModal() {
+    document.getElementById('addStokModal').classList.remove('hidden');
+}
+
+function closeAddModal() {
+    document.getElementById('addStokModal').classList.add('hidden');
+}
+
 function openEditModal(button) {
     const id = button.dataset.id;
     const jumlah = button.dataset.jumlah;

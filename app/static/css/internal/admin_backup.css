@@ -1,0 +1,7 @@
+/* admin_backup.css */
+/* Styles specific to the admin backup page */
+
+/* Custom styling for drag and drop area interactions */
+#dragDropArea {
+    transition: all 0.3s ease;
+}

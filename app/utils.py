@@ -17,6 +17,14 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+def operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or current_user.role != 'operator':
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 def validate_cetak_data(nik, nama, jenis_cetak, registrasi_ikd):
     """
     Validates common printing data (NIK and Name).

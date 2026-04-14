@@ -1,8 +1,9 @@
 from flask import Flask
 from config import Config
-from app.extensions import db, migrate, login_manager, talisman, csrf, limiter
+from app.extensions import db, migrate, login_manager, talisman, csrf, limiter, scheduler, scheduler_started
 import click
 from flask.cli import with_appcontext
+import os
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -66,6 +67,10 @@ def create_app(config_class=Config):
     app.register_blueprint(auth_bp, url_prefix='/auth') # URL: /auth/login
     app.register_blueprint(admin_bp, url_prefix='/admin') # URL: /admin/dashboard
     app.register_blueprint(ops_bp, url_prefix='/operator') # URL: /operator/dashboard
+
+    # 2.5 Register Jinja2 custom filters for templates
+    import json
+    app.jinja_env.filters['fromjson'] = lambda x: json.loads(x) if isinstance(x, str) else x
 
     # Error Handlers
     @app.errorhandler(404)
@@ -152,5 +157,163 @@ def create_app(config_class=Config):
                 db.session.add(op_user)
                 db.session.commit()
                 click.echo("User operator default telah dibuat (username: operator, password: operator)")
+
+    # CLI command: Manual trigger for backup
+    @app.cli.command("backup-now")
+    @with_appcontext
+    def backup_now_command():
+        """Trigger manual database backup immediately."""
+        from app.services.backup_service import BackupService
+        
+        click.echo("Starting manual backup...")
+        service = BackupService()
+        result = service.backup_database(format='sql')
+        
+        if result['success']:
+            click.echo(f"✓ Backup successful: {result['filename']}")
+            click.echo(f"  File size: {result['message']}")
+        else:
+            click.echo(f"✗ Backup failed: {result['error']}")
+
+    # CLI command: Test database connectivity
+    @app.cli.command("test-db-connection")
+    @with_appcontext
+    def test_db_connection():
+        """Test database connection and credentials."""
+        try:
+            from sqlalchemy import text
+            result = db.session.execute(text("SELECT 1"))
+            click.echo("✓ Database connection successful")
+        except Exception as e:
+            click.echo(f"✗ Database connection failed: {e}")
+
+    # CLI command: Initialize database
+    @app.cli.command("init-backup-db")
+    @with_appcontext
+    def init_backup_db():
+        """Initialize backup-related tables (BackupSchedule, BackupLog)."""
+        try:
+            db.create_all()
+            click.echo("✓ Backup tables initialized")
+        except Exception as e:
+            click.echo(f"✗ Failed to initialize backup tables: {e}")
+
+    # 3. Initialize Scheduler for automated backups
+    def _init_scheduler():
+        """Initialize and start the APScheduler for backup tasks."""
+        global scheduler_started
+        
+        if scheduler_started:
+            return
+        
+        try:
+            # Configure scheduler
+            from apscheduler.executors.pool import ThreadPoolExecutor
+            executors = {
+                'default': ThreadPoolExecutor(max_workers=2)
+            }
+            
+            job_defaults = {
+                'coalesce': True,
+                'max_instances': 1
+            }
+            
+            scheduler.configure(
+                executors=executors,
+                job_defaults=job_defaults,
+                timezone='Asia/Jakarta'
+            )
+            
+            # Register backup job from schedule if enabled
+            def _register_backup_jobs():
+                from app.models import BackupSchedule
+                from .routes.admin_routes import _scheduled_backup_task
+                
+                # Remove existing jobs
+                for job in scheduler.get_jobs():
+                    if job.name == 'scheduled_backup':
+                        scheduler.remove_job(job.id)
+                
+                # Check if any schedule is enabled
+                with app.app_context():
+                    schedule = BackupSchedule.query.first()
+                    if schedule and schedule.enabled:
+                        import json
+                        from datetime import datetime
+                        
+                        # Parse execution time (HH:MM format)
+                        try:
+                            hour, minute = schedule.execution_time.split(':')
+                            hour, minute = int(hour), int(minute)
+                        except:
+                            hour, minute = 2, 0  # Default to 2:00 AM
+                        
+                        # Parse days of week (JSON array)
+                        try:
+                            days = json.loads(schedule.days_of_week)
+                        except:
+                            days = [0]  # Default to Senin
+                        
+                        # Add cron trigger for each day
+                        day_names = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+                        triggered_days = [day_names[d] for d in days if 0 <= d < 7]
+                        
+                        if triggered_days:
+                            from apscheduler.triggers.cron import CronTrigger
+                            trigger = CronTrigger(
+                                day_of_week=','.join(triggered_days),
+                                hour=hour,
+                                minute=minute,
+                                timezone='Asia/Jakarta'
+                            )
+                            
+                            scheduler.add_job(
+                                _scheduled_backup_task,
+                                trigger=trigger,
+                                id='scheduled_backup',
+                                name='scheduled_backup',
+                                replace_existing=True
+                            )
+                            
+                            print(f"[SCHEDULER] ✓ Backup job scheduled for {','.join(triggered_days)} at {hour:02d}:{minute:02d}")
+            
+            # Start scheduler
+            if not scheduler.running:
+                scheduler.start()
+                scheduler_started = True
+                
+                # Register jobs after scheduler starts
+                _register_backup_jobs()
+                
+                print("[SCHEDULER] ✓ Background scheduler started for automated backups")
+        
+        except Exception as e:
+            print(f"[SCHEDULER] Warning: Failed to initialize scheduler: {e}")
+
+    # 4. Auto-initialization on startup (Disaster Recovery Protection)
+    with app.app_context():
+        try:
+            from app.services.init_service import InitService
+            print("\n" + "="*70)
+            print("DOMBA Application Startup")
+            print("="*70)
+            
+            init_service = InitService(app, db)
+            init_result = init_service.run_initialization()
+            
+            for msg in init_result['messages']:
+                print(f"  {msg}")
+            
+            if init_result['warnings']:
+                for warn in init_result['warnings']:
+                    print(f"  {warn}")
+            
+            print("="*70 + "\n")
+            
+            # Initialize scheduler for automated backups
+            _init_scheduler()
+        
+        except Exception as e:
+            print(f"Warning during auto-initialization: {e}")
 
     return app

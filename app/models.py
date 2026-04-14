@@ -94,3 +94,79 @@ class DetailCetak(db.Model):
 
     def __repr__(self):
         return f'<DetailCetak {self.nik} - {self.nama_lengkap}>'
+
+# ============================================================================
+# DISASTER RECOVERY & BACKUP MANAGEMENT MODELS
+# ============================================================================
+# These models support automated database backup, restore, and scheduling.
+# BackupSchedule: Stores recurring backup schedules (when & how often)
+# BackupLog: Audit trail of all backup operations (for compliance & recovery)
+
+class BackupSchedule(db.Model):
+    """
+    Penjadwalan backup otomatis yang dapat diatur melalui UI admin.
+    
+    Attributes:
+        id (int): Primary key
+        enabled (bool): Apakah jadwal backup aktif?
+        days_of_week (str): JSON array [0-6] untuk hari (0=Senin, 6=Minggu)
+        execution_time (str): Waktu eksekusi HH:MM format (misal: "10:30")
+        backup_format (str): Format backup 'sql' atau 'binary'
+        created_at (datetime): Tanggal pembuatan jadwal
+        updated_at (datetime): Terakhir dimodifikasi
+        created_by_id (int): User ID yang membuat jadwal
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    enabled = db.Column(db.Boolean, default=False)
+    days_of_week = db.Column(db.String(50), default='[1]')  # JSON: [1,3,5] = Senin,Rabu,Jumat
+    execution_time = db.Column(db.String(8), default='02:00')  # HH:MM format
+    backup_format = db.Column(db.String(20), default='sql')  # 'sql' atau 'binary'
+    retention_days = db.Column(db.Integer, default=30)  # Hapus backup lebih dari N hari
+    created_at = db.Column(db.DateTime, default=get_gmt7_time)
+    updated_at = db.Column(db.DateTime, default=get_gmt7_time, onupdate=get_gmt7_time)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Relationships
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    def __repr__(self):
+        return f'<BackupSchedule enabled={self.enabled} time={self.execution_time}>'
+
+class BackupLog(db.Model):
+    """
+    Audit trail untuk semua operasi backup & restore.
+    Digunakan untuk tracking, verifikasi integritas, dan compliance.
+    
+    Attributes:
+        id (int): Primary key
+        filename (str): Nama file backup (misal: backup_2026_04_14_103045.sql)
+        file_size (int): Ukuran file dalam bytes
+        file_path (str): Path absolut ke file backup
+        backup_type (str): 'sql' atau 'binary' (custom PostgreSQL format)
+        status (str): 'SUCCESS', 'FAILED', 'VERIFIED', 'CORRUPTED'
+        operation (str): 'BACKUP', 'RESTORE', 'MANUAL', 'SCHEDULED'
+        error_message (str): Pesan error jika status FAILED/CORRUPTED
+        created_at (datetime): Kapan operasi dilakukan
+        created_by_id (int): User ID yang melakukan operasi
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    file_size = db.Column(db.BigInteger, default=0)  # Bytes
+    file_path = db.Column(db.String(512), nullable=False)
+    backup_type = db.Column(db.String(20), default='sql')  # 'sql' atau 'binary'
+    status = db.Column(db.String(20), default='SUCCESS')  # SUCCESS, FAILED, VERIFIED, CORRUPTED
+    operation = db.Column(db.String(20), default='BACKUP')  # BACKUP, RESTORE, MANUAL, SCHEDULED
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=get_gmt7_time)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Relationships
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+
+    def __repr__(self):
+        return f'<BackupLog {self.filename} - {self.status}>'
+
+    def get_file_size_mb(self):
+        """Helper: Format file size as MB string"""
+        mb = self.file_size / (1024 * 1024)
+        return f"{mb:.2f} MB"

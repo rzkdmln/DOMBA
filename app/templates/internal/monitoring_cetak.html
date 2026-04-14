@@ -1,0 +1,214 @@
+{% extends 'base_internal.html' %}
+
+{% block title %}Monitoring Cetak Seluruh Kecamatan | DOMBA{% endblock %}
+{% block header_title %}Monitoring Cetak Real-time{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+    <!-- Search and Filter Controls -->
+    <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/30">
+        <div class="flex flex-col gap-5">
+            <!-- Search Row -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input id="searchInput" type="text" placeholder="Cari berdasarkan nama atau NIK..." 
+                       value="{{ search }}"
+                       class="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm shadow-sm"
+                       autocomplete="off">
+            </div>
+            
+            <!-- Filters Row -->
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    {% if not is_operator %}
+                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <i class="fa-solid fa-filter text-slate-400 text-[10px]"></i>
+                        <select id="kecamatanFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer min-w-[140px]">
+                            <option value="">Semua Wilayah</option>
+                            {% for kec in kecamatans %}
+                            <option value="{{ kec.id }}" {% if kecamatan_filter == kec.id|string %}selected{% endif %}>{{ kec.nama_kecamatan }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <select id="statusFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <option value="">Semua Status Ambil</option>
+                            <option value="diambil" {% if status_filter == 'diambil' %}selected{% endif %}>Sudah Diambil</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Belum Diambil</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <select id="kondisiFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <option value="">Semua Hasil Cetak</option>
+                            <option value="BERHASIL" {% if kondisi_filter == 'BERHASIL' %}selected{% endif %}>Berhasil</option>
+                            <option value="GAGAL" {% if kondisi_filter == 'GAGAL' %}selected{% endif %}>Gagal/Rusak</option>
+                        </select>
+                    </div>
+
+                    {% if not is_operator %}
+                    <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
+                        <select id="operatorFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <option value="">Semua User</option>
+                            {% for op in operators %}
+                            <option value="{{ op.id }}" {% if operator_filter == op.id|string %}selected{% endif %}>@{{ op.username }} ({{ 'Admin' if op.role == 'admin_dinas' else 'Operator' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Export Button -->
+                <a href="{{ url_for('admin.export_cetak' if not is_operator else 'operator.export_my_cetak', search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Export Excel (.xlsx)">
+                    <i class="fa-solid fa-download"></i>
+                </a>
+            </div>
+
+            <!-- Per Page Selector -->
+            <div class="flex items-center gap-2 bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200/60">
+                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Tampilkan</span>
+                <select id="perPageSelect" class="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer">
+                    <option value="10" {% if pagination_info and pagination_info.per_page == 10 %}selected{% endif %}>10</option>
+                    <option value="20" {% if pagination_info and pagination_info.per_page == 20 %}selected{% endif %}>20</option>
+                    <option value="50" {% if pagination_info and pagination_info.per_page == 50 %}selected{% endif %}>50</option>
+                    <option value="0" {% if not pagination_info or pagination_info.per_page == 0 %}selected{% endif %}>Semua</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="bg-slate-50/50">
+                    <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="0">Waktu Cetak <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="1">Lokasi <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="2">Data Penduduk <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-4 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="3">IKD <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="4">Hasil Cetak <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="5">Status Ambil <i class="fa-solid fa-sort ml-1"></i></th>
+                    <th class="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest sortable" data-column="6">Operator <i class="fa-solid fa-sort ml-1"></i></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                {% for item in cetaks %}
+                <tr class="hover:bg-slate-50/50 transition-colors">
+                    <td class="px-8 py-5">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-black text-slate-700">{{ item.tanggal_cetak.strftime('%d/%m/%Y') }}</span>
+                            <span class="text-[10px] font-bold text-slate-400 mt-0.5">{{ item.tanggal_cetak.strftime('%H:%M') }} WIB</span>
+                        </div>
+                    </td>
+                    <td class="px-8 py-5">
+                        <span class="text-sm font-black text-slate-700">{{ item.kecamatan.nama_kecamatan }}</span>
+                    </td>
+                    <td class="px-8 py-5">
+                        <div class="flex flex-col">
+                            <span class="text-sm font-black text-slate-700">{{ item.nama_lengkap }}</span>
+                            <span class="font-mono text-[11px] text-indigo-500 font-bold tracking-tighter mt-0.5">{{ item.nik }}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-5 text-center">
+                        {% if item.registrasi_ikd %}
+                            <span class="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase border border-emerald-100">YA</span>
+                        {% else %}
+                            <span class="px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-black uppercase border border-rose-100">TIDAK</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        <div class="flex flex-col items-center">
+                            {% if item.status_cetak == 'GAGAL' %}
+                                <span class="px-3 py-1 bg-rose-100 text-rose-600 rounded-lg text-[10px] font-black uppercase">GAGAL</span>
+                                <span class="text-[9px] font-bold text-slate-400 mt-1 max-w-[120px] text-center truncate" title="{{ item.keterangan_gagal }}">{{ item.keterangan_gagal or 'Rusak/Gagal Cetak' }}</span>
+                            {% else %}
+                                <span class="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-xs font-black uppercase">BERHASIL</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-8 py-5 text-center">
+                        {% if item.status_cetak == 'GAGAL' %}
+                            <span class="text-[10px] font-bold text-slate-300 italic uppercase">TIDAK BERLAKU</span>
+                        {% elif item.status_ambil %}
+                            <div class="flex flex-col items-center">
+                                <span class="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-black">SUDAH DIAMBIL</span>
+                                <span class="text-[9px] font-bold text-slate-400 mt-1">{{ item.hubungan }}: {{ item.penerima }}</span>
+                                <span class="text-[9px] font-bold text-slate-500 mt-1">{{ item.tanggal_ambil.strftime('%d/%m/%Y %H:%M') }}</span>
+                            </div>
+                        {% else %}
+                            <span class="px-3 py-1 bg-amber-100 text-amber-600 rounded-lg text-xs font-black">BELUM DIAMBIL</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-8 py-5 text-right">
+                        <span class="text-xs font-bold text-slate-500">@{{ item.user.username }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="px-8 py-12 text-center text-slate-400">Belum ada data cetak.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    {% if pagination_info %}
+    <div id="pagination-controls" class="px-8 py-6 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-tight">
+            {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
+        </p>
+        <div class="flex items-center space-x-2">
+            {% if pagination_info.has_prev %}
+            <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=pagination_info.prev_page, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            {% endif %}
+            
+            {% set start_page = 1 if pagination_info.page - 2 < 1 else pagination_info.page - 2 %}
+            {% set end_page = pagination_info.total_pages if pagination_info.page + 2 > pagination_info.total_pages else pagination_info.page + 2 %}
+            
+            {% if start_page > 1 %}
+            <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=1, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">1</a>
+            {% if start_page > 2 %}
+            <span class="px-2 py-2 text-slate-400">...</span>
+            {% endif %}
+            {% endif %}
+            
+            {% for page_num in range(start_page, end_page + 1) %}
+            <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=page_num, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
+               class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors
+               {% if page_num == pagination_info.page %}
+               bg-blue-600 text-white border-blue-600
+               {% else %}
+               bg-white text-slate-600 border-slate-200 hover:bg-slate-50
+               {% endif %}">
+               {{ page_num }}
+            </a>
+            {% endfor %}
+            
+            {% if end_page < pagination_info.total_pages %}
+            {% if end_page < pagination_info.total_pages - 1 %}
+            <span class="px-2 py-2 text-slate-400">...</span>
+            {% endif %}
+            <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=pagination_info.total_pages, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">{{ pagination_info.total_pages }}</a>
+            {% endif %}
+            
+            {% if pagination_info.has_next %}
+            <a href="{{ url_for('operator.monitoring_cetak' if is_operator else 'admin.monitoring_cetak', page=pagination_info.next_page, per_page=pagination_info.per_page, search=search, kecamatan=kecamatan_filter, status=status_filter, kondisi=kondisi_filter, operator=operator_filter) }}" 
+               class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/internal/admin_monitoring_cetak.js') }}"></script>
+{% endblock %}

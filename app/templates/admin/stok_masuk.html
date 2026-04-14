@@ -20,83 +20,55 @@ input[type="number"] {
 {% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-    <!-- Form Input Section -->
-    <div class="lg:col-span-1">
-        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 sticky top-24">
-            <div class="bg-gradient-to-r from-blue-700 to-blue-600 px-6 py-8 text-white">
-                <div class="flex items-center space-x-4 mb-4">
-                    <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl">
-                        <i class="fa-solid fa-boxes-stacked"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold">Terima Stok</h3>
-                        <p class="text-white/70 text-sm">Input data blangko baru</p>
-                    </div>
-                </div>
-            </div>
-            
-            <form action="{{ url_for('admin.stok_masuk') }}" method="POST" class="p-6 space-y-6">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <!-- Tanggal Terima (Informasi saja) -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tanggal Penerimaan</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="date" name="tanggal" value="{{ today_date }}" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700">
-                    </div>
-                </div>
-
-                <!-- Sumber -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sumber Pengadaan</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-building absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <select name="sumber" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700 appearance-none">
-                            <option value="Pusat (Kemendagri)">Pusat (Kemendagri)</option>
-                            <option value="Hibah Provinsi">Hibah Provinsi</option>
-                            <option value="Pinjaman Antar Daerah">Pinjaman Antar Daerah</option>
-                            <option value="Lainnya">Lainnya</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Jumlah -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Jumlah Blangko (Keping)</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="number" name="jumlah" required min="1" placeholder="Contoh: 2000" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-black text-slate-800 text-lg">
-                    </div>
-                </div>
-
-                <!-- Keterangan -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Keterangan Tambahan</label>
-                    <textarea name="keterangan" rows="3" placeholder="Sebutkan nomor berita acara atau detail pengiriman..." class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all text-sm"></textarea>
-                </div>
-
-                <div class="pt-2">
-                    <button type="submit" class="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-700 transition-all transform hover:-translate-y-1 flex items-center justify-center">
-                        <i class="fa-solid fa-save mr-2"></i> Simpan Data Stok
-                    </button>
-                    <p class="text-[0.65rem] text-slate-400 text-center mt-4">Pastikan data yang diinput sesuai dengan Berita Acara Serah Terima (BAST).</p>
-                </div>
-            </form>
-        </div>
+<div class="space-y-6">
+    <!-- Header Actions -->
+    <div class="flex items-center justify-end">
+        <button id="addStokBtn" onclick="openAddModal()" class="px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all transform hover:scale-105 flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i> Tambah Stok Baru
+        </button>
     </div>
 
     <!-- History Table Section -->
-    <div class="lg:col-span-2">
-        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 h-full">
-            <div class="p-8 border-b border-slate-50 flex items-center justify-between">
-                <div>
-                    <h3 class="text-xl font-bold text-slate-800">Riwayat Pengadaan</h3>
-                    <p class="text-slate-500 text-sm">Log penerimaan blangko KTP-el ke Dinas.</p>
+    <div>
+        <div class="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+            <div class="p-8 border-b border-slate-50">
+                <div class="space-y-6">
+                    <!-- Filter Tools & Actions -->
+                    <div class="flex flex-wrap items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <!-- Sumber Filter -->
+                            <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-200">
+                                <i class="fa-solid fa-filter text-slate-400 text-[10px]"></i>
+                                <select id="sumberFilter" class="bg-transparent text-slate-700 text-sm font-semibold focus:outline-none cursor-pointer">
+                                    <option value="">Semua Sumber</option>
+                                    <option value="Pusat (Kemendagri)">Pusat (Kemendagri)</option>
+                                    <option value="Hibah Provinsi">Hibah Provinsi</option>
+                                    <option value="Pinjaman Antar Daerah">Pinjaman Antar Daerah</option>
+                                    <option value="Lainnya">Lainnya</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Right Section: Per Page Selector & Export Button -->
+                        <div class="flex items-center gap-3">
+                            <!-- Per Page Selector -->
+                            <div class="flex items-center gap-2 bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200/60">
+                                <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Tampilkan</span>
+                                <select id="perPageSelect" class="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer">
+                                    <option value="10" selected="">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="0">Semua</option>
+                                </select>
+                            </div>
+
+                            <!-- Export Button -->
+                            <a href="{{ url_for('admin.export_stok_masuk') }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Export Riwayat Pengadaan">
+                                <i class="fa-solid fa-download"></i>
+                            </a>
+                        </div>
+                    </div>
                 </div>
-                <a href="{{ url_for('admin.export_stok_masuk') }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Export Riwayat Pengadaan">
-                    <i class="fa-solid fa-download"></i>
-                </a>
             </div>
 
             <div class="overflow-x-auto">
@@ -164,6 +136,78 @@ input[type="number"] {
             </div>
             {% endif %}
         </div>
+    </div>
+</div>
+
+<!-- Add Stok Modal -->
+<div id="addStokModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="bg-gradient-to-r from-blue-700 to-blue-600 px-8 py-8 text-white sticky top-0 z-10">
+            <div class="flex items-center space-x-4 mb-4">
+                <div class="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center text-2xl">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-xl font-bold">Terima Stok</h3>
+                    <p class="text-white/70 text-sm">Input data blangko baru</p>
+                </div>
+                <button type="button" onclick="closeAddModal()" class="text-white/70 hover:text-white transition-colors">
+                    <i class="fa-solid fa-times text-2xl"></i>
+                </button>
+            </div>
+        </div>
+
+        <form action="{{ url_for('admin.stok_masuk') }}" method="POST" class="p-8 space-y-6">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <!-- Tanggal Terima (Informasi saja) -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Tanggal Penerimaan</label>
+                <div class="relative">
+                    <i class="fa-solid fa-calendar absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="date" name="tanggal" value="{{ today_date }}" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700">
+                </div>
+            </div>
+
+            <!-- Sumber -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sumber Pengadaan</label>
+                <div class="relative">
+                    <i class="fa-solid fa-building absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <select name="sumber" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-medium text-slate-700 appearance-none">
+                        <option value="Pusat (Kemendagri)">Pusat (Kemendagri)</option>
+                        <option value="Hibah Provinsi">Hibah Provinsi</option>
+                        <option value="Pinjaman Antar Daerah">Pinjaman Antar Daerah</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Jumlah -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Jumlah Blangko (Keping)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-hashtag absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                    <input type="number" name="jumlah" required min="1" placeholder="Contoh: 2000" class="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all font-black text-slate-800 text-lg">
+                </div>
+            </div>
+
+            <!-- Keterangan -->
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Keterangan Tambahan</label>
+                <textarea name="keterangan" rows="3" placeholder="Sebutkan nomor berita acara atau detail pengiriman..." class="w-full p-4 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 transition-all text-sm"></textarea>
+            </div>
+
+            <div class="pt-2 flex space-x-4">
+                <button type="submit" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/30 hover:bg-blue-700 transition-all transform hover:-translate-y-1 flex items-center justify-center">
+                    <i class="fa-solid fa-save mr-2"></i> Simpan Data Stok
+                </button>
+                <button type="button" onclick="closeAddModal()" class="flex-1 py-4 bg-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-300 transition-colors">
+                    Batal
+                </button>
+            </div>
+            <p class="text-[0.65rem] text-slate-400 text-center mt-4">Pastikan data yang diinput sesuai dengan Berita Acara Serah Terima (BAST).</p>
+        </form>
     </div>
 </div>
 

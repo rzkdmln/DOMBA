@@ -6,126 +6,16 @@
 {% block content %}
 <div id="role-data" data-is-admin="{{ is_admin|default(False)|tojson }}" style="display: none;"></div>
 <div class="space-y-8">
-    <!-- Form Input Section -->
+    <!-- Simple Add Button -->
     {% if stok and stok.jumlah_ktp > 0 %}
-    <div class="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
-        <div class="bg-indigo-700 px-8 py-10 text-white relative">
-            <div class="relative z-10">
-                <div class="flex items-center space-x-3 mb-1">
-                    <h3 class="text-2xl font-black">Input Data Cetak</h3>
-                    <div class="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full border border-white/30 flex items-center space-x-2">
-                        <i class="fa-solid fa-location-dot text-[0.7rem] text-indigo-200"></i>
-                        <span class="text-[0.7rem] font-bold tracking-wider uppercase text-white">{{ current_user.kecamatan.nama_kecamatan }}</span>
-                    </div>
-                </div>
-            </div>
-            <i class="fa-solid fa-id-card text-7xl absolute right-8 top-1/2 -translate-y-1/2 text-white/10"></i>
+    <div class="flex items-center justify-between">
+        <div class="text-lg font-black text-slate-700 flex items-center">
+            <i class="fa-solid fa-layer-group mr-3 text-indigo-500 text-2xl"></i>
+            Saldo: {{ "{:,}".format(stok.jumlah_ktp if stok else 0).replace(',', '.') }} Keping
         </div>
-
-        <form action="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai') }}" method="POST" class="p-8" novalidate onsubmit="return validateForm(this)">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- NIK -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">NIK (16 Digit)</label>
-                    <div class="relative group">
-                        <i class="fa-solid fa-address-card absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
-                        <input type="text" name="nik" required maxlength="16" minlength="16" pattern="[0-9]{16}" title="NIK harus 16 digit angka" placeholder="Masukkan 16 digit NIK..." oninput="this.value = this.value.replace(/[^0-9]/g, '')"
-                            class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
-                    </div>
-                </div>
-
-                <!-- Nama Lengkap -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap</label>
-                    <div class="relative group">
-                        <i class="fa-solid fa-user absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
-                        <input type="text" name="nama_lengkap" required pattern="[A-Z\s&apos;\-]+" title="Nama Lengkap hanya huruf kapital, spasi, dash, atau kutip" placeholder="Nama sesuai KTP..." oninput="this.value = this.value.toUpperCase().replace(/[^A-Z\s&apos;\-]/g, '')"
-                            class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
-                    </div>
-                </div>
-
-                <!-- Jenis Cetak -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Jenis Cetak</label>
-                    <div class="relative group">
-                        <i class="fa-solid fa-print absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
-                        <select name="jenis_cetak" required class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
-                            <option value="">Pilih Jenis Cetak</option>
-                            <option value="Cetak Baru">Cetak Baru</option>
-                            <option value="Hilang">Hilang</option>
-                            <option value="Rusak">Rusak</option>
-                            <option value="Perubahan Data">Perubahan Data</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Kondisi Hasil Cetak dan Registrasi IKD dalam 2 kolom -->
-            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Kondisi Hasil Cetak -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Kondisi Hasil Cetak</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="status_cetak" value="BERHASIL" class="hidden peer" onchange="toggleGagalReason(false)">
-                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition-all shadow-sm hover:shadow-md text-sm">
-                                <i class="fa-solid fa-circle-check mb-1 block text-lg"></i>
-                                BERHASIL
-                            </div>
-                        </label>
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="status_cetak" value="GAGAL" class="hidden peer" onchange="toggleGagalReason(true)">
-                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition-all shadow-sm hover:shadow-md text-sm">
-                                <i class="fa-solid fa-circle-xmark mb-1 block text-lg"></i>
-                                GAGAL / RUSAK
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Registrasi IKD -->
-                <div>
-                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Registrasi IKD</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="registrasi_ikd" value="true" required class="hidden peer">
-                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition-all shadow-sm hover:shadow-md text-sm">
-                                <i class="fa-solid fa-check mb-1 block text-lg"></i>
-                                YA
-                            </div>
-                        </label>
-                        <label class="cursor-pointer group">
-                            <input type="radio" name="registrasi_ikd" value="false" class="hidden peer">
-                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition-all shadow-sm hover:shadow-md text-sm">
-                                <i class="fa-solid fa-xmark mb-1 block text-lg"></i>
-                                TIDAK
-                            </div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Penyebab Gagal / Rusak (di luar grid) -->
-            <div id="gagalReasonContainer" class="hidden w-full animate-in fade-in slide-in-from-top-2 mt-6">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Penyebab Gagal / Rusak</label>
-                <div class="relative group">
-                    <i class="fa-solid fa-comment-dots absolute left-5 top-5 text-slate-300 group-focus-within:text-rose-500 transition-colors"></i>
-                    <textarea name="keterangan_gagal" placeholder="Contoh: Blangko pecah, Chip tidak terbaca, Tinta ribbon pudar..." 
-                        class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-rose-500 focus:bg-white transition-all outline-none font-bold text-slate-700 h-[100px]"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-8 flex items-center justify-between">
-                <div class="text-lg font-black text-slate-700 flex items-center">
-                    <i class="fa-solid fa-layer-group mr-2 text-indigo-500"></i>
-                    Saldo: {{ "{:,}".format(stok.jumlah_ktp if stok else 0).replace(',', '.') }} Keping
-                </div>
-                <button type="submit" class="px-10 py-4 bg-indigo-600 text-white rounded-[1.2rem] font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all hover:-translate-y-1 flex items-center tracking-wide">
-                    <i class="fa-solid fa-save mr-3"></i> SIMPAN
-                </button>
-            </div>
-        </form>
+        <button id="addInputBtn" onclick="openInputModal()" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-500/20 hover:bg-indigo-700 transition-all transform hover:scale-105 flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i> Tambah Data Cetak
+        </button>
     </div>
     {% else %}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -156,18 +46,38 @@
     </div>
     {% endif %}
 
-    <!-- Data Table Section -->
+    <!-- Data Table Section with Tabs -->
     <div class="bg-white rounded-[2.5rem] shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+        <!-- Tab Navigation -->
+        <div class="border-b border-slate-100">
+            <div class="flex">
+                <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', status='pending') }}" class="flex-1 px-8 py-4 text-center font-black uppercase text-sm transition-all flex items-center justify-center {% if request.args.get('status', 'pending') == 'pending' %}bg-indigo-50 border-b-2 border-indigo-600 text-indigo-600{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                    <i class="fa-solid fa-clock mr-2 text-amber-500"></i>
+                    KTP Belum Diambil
+                </a>
+                <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', status='taken') }}" class="flex-1 px-8 py-4 text-center font-black uppercase text-sm transition-all flex items-center justify-center {% if request.args.get('status') == 'taken' %}bg-emerald-50 border-b-2 border-emerald-600 text-emerald-600{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+                    <i class="fa-solid fa-circle-check mr-2 text-emerald-500"></i>
+                    KTP Sudah Diambil
+                </a>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
         <div class="px-8 py-6 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 class="text-xl font-black text-slate-800 flex items-center">
-                <i class="fa-solid fa-clock mr-3 text-amber-500 text-2xl"></i>
-                KTP Belum Diambil
+                {% if request.args.get('status') == 'taken' %}
+                    <i class="fa-solid fa-circle-check mr-3 text-emerald-500 text-2xl"></i>
+                    KTP Sudah Diambil
+                {% else %}
+                    <i class="fa-solid fa-clock mr-3 text-amber-500 text-2xl"></i>
+                    KTP Belum Diambil
+                {% endif %}
             </h3>
             <div class="flex items-center gap-3">
                 <!-- Per Page Selector -->
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm text-slate-500 font-medium">Tampilkan:</span>
-                    <select id="perPageSelect" class="px-3 py-1.5 bg-slate-50 text-slate-700 text-sm rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                <div class="flex items-center gap-2 bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200/60">
+                    <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Tampilkan</span>
+                    <select id="perPageSelect" onchange="changePerPage(this)" class="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer">
                         <option value="10" {% if pagination_info and pagination_info.per_page == 10 %}selected{% endif %}>10</option>
                         <option value="20" {% if pagination_info and pagination_info.per_page == 20 %}selected{% endif %}>20</option>
                         <option value="50" {% if pagination_info and pagination_info.per_page == 50 %}selected{% endif %}>50</option>
@@ -176,9 +86,6 @@
                 <a href="{{ url_for('admin.export_cetak' if is_admin else 'operator.export_my_cetak') }}" class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-slate-100 transition-colors" title="Download Excel">
                     <i class="fa-solid fa-download"></i>
                 </a>
-                <span class="px-4 py-2 bg-amber-50 text-amber-600 rounded-full text-xs font-black uppercase tracking-wider">
-                    Total Pending: {{ total_cetak }} KTP
-                </span>
             </div>
         </div>
 
@@ -280,8 +187,9 @@
                     {{ ((pagination_info.page - 1) * pagination_info.per_page) + 1 }}-{{ pagination_info.page * pagination_info.per_page if pagination_info.page * pagination_info.per_page < pagination_info.total_records else pagination_info.total_records }} dari {{ pagination_info.total_records }}
                 </div>
                 <div class="flex items-center space-x-2">
+                    {% set status_param = request.args.get('status', 'pending') %}
                     {% if pagination_info.has_prev %}
-                    <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=pagination_info.prev_page, per_page=pagination_info.per_page) }}"
+                    <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', page=pagination_info.prev_page, per_page=pagination_info.per_page, status=status_param) }}"
                        class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium" title="Sebelumnya">
                         <i class="fa-solid fa-chevron-left"></i>
                     </a>
@@ -291,7 +199,7 @@
                     {% set end_page = pagination_info.total_pages if pagination_info.page + 2 > pagination_info.total_pages else pagination_info.page + 2 %}
 
                     {% if start_page > 1 %}
-                    <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=1, per_page=pagination_info.per_page) }}"
+                    <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', page=1, per_page=pagination_info.per_page, status=status_param) }}"
                        class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">1</a>
                     {% if start_page > 2 %}
                     <span class="px-2 py-2 text-slate-400">...</span>
@@ -299,7 +207,7 @@
                     {% endif %}
 
                     {% for page_num in range(start_page, end_page + 1) %}
-                    <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=page_num, per_page=pagination_info.per_page) }}"
+                    <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', page=page_num, per_page=pagination_info.per_page, status=status_param) }}"
                        class="px-3 py-2 rounded-lg border text-sm font-medium transition-colors
                        {% if page_num == pagination_info.page %}
                        bg-indigo-600 text-white border-indigo-600
@@ -314,12 +222,12 @@
                     {% if end_page < pagination_info.total_pages - 1 %}
                     <span class="px-2 py-2 text-slate-400">...</span>
                     {% endif %}
-                    <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=pagination_info.total_pages, per_page=pagination_info.per_page) }}"
+                    <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', page=pagination_info.total_pages, per_page=pagination_info.per_page, status=status_param) }}"
                        class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors text-sm font-medium">{{ pagination_info.total_pages }}</a>
                     {% endif %}
 
                     {% if pagination_info.has_next %}
-                    <a href="{{ url_for('admin.lapor_pakai' if is_admin else 'operator.lapor_pakai', page=pagination_info.next_page, per_page=pagination_info.per_page) }}"
+                    <a href="{{ url_for('admin.input_data' if is_admin else 'operator.input_data', page=pagination_info.next_page, per_page=pagination_info.per_page, status=status_param) }}"
                        class="px-3 py-2 bg-white text-slate-600 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors text-sm font-medium" title="Selanjutnya">
                         <i class="fa-solid fa-chevron-right"></i>
                     </a>
@@ -518,12 +426,12 @@
 
 <!-- Modal View Detail Cetakan -->
 <div id="viewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden transform transition-all">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all">
         <div class="bg-gray-700 p-8 text-white">
             <h3 class="text-xl font-black">Detail Cetakan</h3>
             <p class="text-gray-100/80 text-sm font-medium mt-1">Informasi lengkap data cetakan</p>
         </div>
-        <div class="p-8 space-y-4">
+        <div class="p-8 grid grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Kecamatan</label>
                 <p class="text-sm font-black text-slate-700" id="viewKecamatan"></p>
@@ -532,7 +440,7 @@
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">NIK</label>
                 <p class="text-sm font-black text-slate-700" id="viewNik"></p>
             </div>
-            <div>
+            <div class="col-span-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Nama Lengkap</label>
                 <p class="text-sm font-black text-slate-700" id="viewNama"></p>
             </div>
@@ -544,39 +452,179 @@
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Registrasi IKD</label>
                 <p class="text-sm font-black text-slate-700" id="viewRegistrasiIKD"></p>
             </div>
-            <div>
+            <div class="col-span-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Waktu Cetak</label>
                 <p class="text-sm font-black text-slate-700" id="viewWaktuCetak"></p>
             </div>
-            <div>
+            <div class="col-span-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Kondisi Hasil</label>
                 <p class="text-sm font-black" id="viewKondisi"></p>
             </div>
-            <div id="gagalDetail" class="hidden">
+            <div id="gagalDetail" class="hidden col-span-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Penyebab Gagal</label>
                 <p class="text-sm font-black text-rose-600 italic" id="viewKeterangan"></p>
             </div>
-            <div id="statusAmbilDiv">
+            <div id="statusAmbilDiv" class="col-span-2">
                 <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Status Ambil</label>
                 <p class="text-sm font-black text-slate-700" id="viewStatus"></p>
             </div>
-            <div id="ambilDetail" class="hidden">
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Hubungan Pengambil</label>
-                <p class="text-sm font-black text-slate-700" id="viewHubungan"></p>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Nama Pengambil</label>
-                <p class="text-sm font-black text-slate-700" id="viewPenerima"></p>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Waktu Diambil</label>
-                <p class="text-sm font-black text-slate-700" id="viewWaktuAmbil"></p>
+            <div id="ambilDetail" class="hidden col-span-2">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Hubungan Pengambil</label>
+                        <p class="text-sm font-black text-slate-700" id="viewHubungan"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Nama Pengambil</label>
+                        <p class="text-sm font-black text-slate-700" id="viewPenerima"></p>
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Waktu Diambil</label>
+                        <p class="text-sm font-black text-slate-700" id="viewWaktuAmbil"></p>
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-4 pt-4">
+            <div class="col-span-2 flex gap-4 pt-4">
                 <button type="button" onclick="closeViewModal()" class="flex-1 py-4 bg-gray-600 text-white rounded-2xl font-black shadow-lg">Tutup</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Input Data Cetak -->
+<div id="inputModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all max-h-[90vh] flex flex-col">
+        <div class="bg-indigo-700 p-8 text-white shrink-0">
+            <h3 class="text-xl font-black">Input Data Cetak</h3>
+            <p class="text-indigo-100/80 text-sm font-medium mt-1">Masukkan data cetak KTP-el baru</p>
+        </div>
+        <form id="inputForm" method="POST" onsubmit="return validateForm(this)" class="p-8 space-y-6 overflow-y-auto">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- NIK -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">NIK (16 Digit)</label>
+                    <div class="relative group">
+                        <i class="fa-solid fa-address-card absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
+                        <input type="text" name="nik" required maxlength="16" minlength="16" pattern="[0-9]{16}" title="NIK harus 16 digit angka" placeholder="Masukkan 16 digit NIK..." oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                            class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
+                    </div>
+                </div>
+
+                <!-- Nama Lengkap -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Nama Lengkap</label>
+                    <div class="relative group">
+                        <i class="fa-solid fa-user absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
+                        <input type="text" name="nama_lengkap" required pattern="[A-Z\s&apos;\-]+" title="Nama Lengkap hanya huruf kapital, spasi, dash, atau kutip" placeholder="Nama sesuai KTP..." oninput="this.value = this.value.toUpperCase().replace(/[^A-Z\s&apos;\-]/g, '')"
+                            class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Jenis Cetak -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Jenis Cetak</label>
+                    <div class="relative group">
+                        <i class="fa-solid fa-print absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors"></i>
+                        <select name="jenis_cetak" required class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold text-slate-700">
+                            <option value="">Pilih Jenis Cetak</option>
+                            <option value="Cetak Baru">Cetak Baru</option>
+                            <option value="Hilang">Hilang</option>
+                            <option value="Rusak">Rusak</option>
+                            <option value="Perubahan Data">Perubahan Data</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Registrasi IKD -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Registrasi IKD</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="registrasi_ikd" value="true" required class="hidden peer">
+                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition-all shadow-sm hover:shadow-md text-sm">
+                                <i class="fa-solid fa-check mb-1 block text-lg"></i>
+                                YA
+                            </div>
+                        </label>
+                        <label class="cursor-pointer group">
+                            <input type="radio" name="registrasi_ikd" value="false" class="hidden peer">
+                            <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition-all shadow-sm hover:shadow-md text-sm">
+                                <i class="fa-solid fa-xmark mb-1 block text-lg"></i>
+                                TIDAK
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kondisi Hasil Cetak -->
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Kondisi Hasil Cetak</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="cursor-pointer group">
+                        <input type="radio" name="status_cetak" value="BERHASIL" class="hidden peer" onchange="toggleGagalReason(false)">
+                        <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-600 transition-all shadow-sm hover:shadow-md text-sm">
+                            <i class="fa-solid fa-circle-check mb-1 block text-lg"></i>
+                            BERHASIL
+                        </div>
+                    </label>
+                    <label class="cursor-pointer group">
+                        <input type="radio" name="status_cetak" value="GAGAL" class="hidden peer" onchange="toggleGagalReason(true)">
+                        <div class="px-4 py-3 text-center rounded-2xl border-2 border-slate-50 bg-slate-50 font-black text-slate-400 peer-checked:bg-rose-50 peer-checked:border-rose-500 peer-checked:text-rose-600 transition-all shadow-sm hover:shadow-md text-sm">
+                            <i class="fa-solid fa-circle-xmark mb-1 block text-lg"></i>
+                            GAGAL / RUSAK
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Penyebab Gagal / Rusak -->
+            <div id="gagalReasonContainer" class="hidden w-full animate-in fade-in slide-in-from-top-2">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Penyebab Gagal / Rusak</label>
+                <div class="relative group">
+                    <i class="fa-solid fa-comment-dots absolute left-5 top-5 text-slate-300 group-focus-within:text-rose-500 transition-colors"></i>
+                    <textarea name="keterangan_gagal" placeholder="Contoh: Blangko pecah, Chip tidak terbaca, Tinta ribbon pudar..." 
+                        class="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:border-rose-500 focus:bg-white transition-all outline-none font-bold text-slate-700 h-[100px]"></textarea>
+                </div>
+            </div>
+
+            <div class="flex gap-4 pt-4 shrink-0">
+                <button type="button" onclick="closeInputModal()" class="flex-1 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">Batal</button>
+                <button type="submit" class="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-200 uppercase tracking-widest">Simpan Data</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/operator/lapor_pakai.js') }}"></script>
+<script src="{{ url_for('static', filename='js/internal/input_data.js') }}"></script>
+<script>
+function openInputModal() {
+    document.getElementById('inputModal').classList.remove('hidden');
+}
+
+function closeInputModal() {
+    document.getElementById('inputModal').classList.add('hidden');
+    document.getElementById('inputForm').reset();
+    document.getElementById('gagalReasonContainer').classList.add('hidden');
+}
+
+function changePerPage(select) {
+    const perPage = select.value;
+    const status = new URLSearchParams(window.location.search).get('status') || 'pending';
+    window.location.href = `{{ url_for('admin.input_data' if is_admin else 'operator.input_data') }}?status=${status}&page=1&per_page=${perPage}`;
+}
+
+// Close modal when clicking outside
+document.getElementById('inputModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeInputModal();
+    }
+});
+</script>
 {% endblock %}

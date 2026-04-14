@@ -71,7 +71,7 @@
         <!-- Distribusi Tab Content -->
         <div class="p-8">
             <!-- Quick Stats for Distribution context -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4">
                     <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center text-xl shadow-inner">
                         <i class="fa-solid fa-warehouse"></i>
@@ -236,7 +236,7 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <!-- Per Page Selector -->
-                        <div class="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center gap-2 bg-slate-100/50 px-4 py-2 rounded-xl border border-slate-200/60">
                             <span class="text-[10px] text-slate-500 font-black uppercase tracking-widest">Tampilkan</span>
                             <select id="perPageSelect" class="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer">
                                 <option value="10" {% if pagination_info and pagination_info.per_page == 10 %}selected{% endif %}>10</option>

@@ -4,7 +4,7 @@ from flask_login import login_required, current_user  # type: ignore
 from app.extensions import db
 from app.models import DetailCetak, Stok, Transaksi
 from sqlalchemy.orm import joinedload
-from app.utils import get_gmt7_time, validate_cetak_data, process_stok_pengurangan
+from app.utils import get_gmt7_time, validate_cetak_data, process_stok_pengurangan, operator_required
 from app.forms import LaporPakaiForm
 from datetime import datetime, timedelta
 import pandas as pd
@@ -15,6 +15,7 @@ ops_bp = Blueprint('operator', __name__)
 
 @ops_bp.route('/dashboard')
 @login_required
+@operator_required
 def dashboard():
     # Ambil stok kecamatan saat ini
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
@@ -34,7 +35,7 @@ def dashboard():
         .filter_by(kecamatan_id=current_user.kecamatan_id)\
         .order_by(Transaksi.created_at.desc()).limit(5).all()
 
-    return render_template('operator/dashboard.html', 
+    return render_template('internal/dashboard.html', 
                           stok=stok, 
                           recent_cetak=recent_cetak,
                           total_hari_ini=total_hari_ini,
@@ -42,6 +43,7 @@ def dashboard():
 
 @ops_bp.route('/export-my-cetak')
 @login_required
+@operator_required
 def export_my_cetak():
     cetaks = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id).all()
     
@@ -69,9 +71,10 @@ def export_my_cetak():
     filename = f"laporan_cetak_{current_user.username}_{get_gmt7_time().strftime('%Y%m%d')}.xlsx"
     return send_file(output, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
-@ops_bp.route('/lapor-pakai', methods=['GET', 'POST'])
+@ops_bp.route('/input-data', methods=['GET', 'POST'])
 @login_required
-def lapor_pakai():
+@operator_required
+def input_data():
     form = LaporPakaiForm()
     
     if form.validate_on_submit():
@@ -107,7 +110,7 @@ def lapor_pakai():
         else:
             flash(message, 'danger')
             
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     elif request.method == 'POST':
         # Flash first validation error
         for field, errors in form.errors.items():
@@ -120,15 +123,21 @@ def lapor_pakai():
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
+    status_filter = request.args.get('status', 'pending')
     
     # Validate per_page options
     if per_page not in [10, 20, 50]:  # Only allow these options for operator
         per_page = 10
     
-    # Define history_query before pagination
-    history_query = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)\
-        .filter(DetailCetak.status_ambil == False)\
-        .order_by(DetailCetak.tanggal_cetak.desc())
+    # Define history_query before pagination based on status filter
+    history_query = DetailCetak.query.filter_by(kecamatan_id=current_user.kecamatan_id)
+    
+    if status_filter == 'taken':
+        history_query = history_query.filter(DetailCetak.status_ambil == True)
+    else:
+        history_query = history_query.filter(DetailCetak.status_ambil == False)
+    
+    history_query = history_query.order_by(DetailCetak.tanggal_cetak.desc())
     
     # Get history with pagination using Flask-SQLAlchemy paginate
     pagination = history_query.paginate(page=page, per_page=per_page, error_out=False)
@@ -149,10 +158,11 @@ def lapor_pakai():
         
     stok = Stok.query.filter_by(kecamatan_id=current_user.kecamatan_id).first()
     
-    return render_template('operator/lapor_pakai.html', history=history, stok=stok, total_cetak=total_cetak, pagination_info=pagination_info)
+    return render_template('internal/input_data.html', history=history, stok=stok, total_cetak=total_cetak, pagination_info=pagination_info)
 
 @ops_bp.route('/monitoring-cetak')
 @login_required
+@operator_required
 def monitoring_cetak():
     # Get pagination parameters
     page = request.args.get('page', 1, type=int)
@@ -215,7 +225,7 @@ def monitoring_cetak():
             'next_page': pagination.next_num
         }
     
-    return render_template('admin/monitoring_cetak.html', 
+    return render_template('internal/monitoring_cetak.html', 
                          cetaks=cetaks, 
                          pagination_info=pagination_info,
                          search=search,
@@ -226,13 +236,14 @@ def monitoring_cetak():
 
 @ops_bp.route('/update-status-ambil/<int:id>', methods=['POST'])
 @login_required
+@operator_required
 def update_status_ambil(id):
     record = DetailCetak.query.get_or_404(id)
     
     # Pastikan operator hanya bisa update data kecamatannya sendiri
     if record.kecamatan_id != current_user.kecamatan_id:
         flash('Unauthorized!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
         
     status = request.form.get('status') == 'true'
     hubungan = request.form.get('hubungan')
@@ -244,7 +255,7 @@ def update_status_ambil(id):
     # Validasi penerima
     if not penerima or not re.match(r'^[A-Z\s\'\-]+$', penerima):
         flash('Nama pengambil hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     record.status_ambil = status
     record.hubungan = hubungan
@@ -258,7 +269,7 @@ def update_status_ambil(id):
                 record.tanggal_ambil = datetime.strptime(tanggal_waktu, '%Y-%m-%d %H:%M')
             else:
                 flash('Tanggal dan waktu harus diisi jika tidak menggunakan waktu sekarang!', 'danger')
-                return redirect(url_for('operator.lapor_pakai'))
+                return redirect(url_for('operator.input_data'))
     else:
         record.tanggal_ambil = None
         record.hubungan = None
@@ -266,17 +277,18 @@ def update_status_ambil(id):
         
     db.session.commit()
     flash('Status pengambilan berhasil diperbarui', 'success')
-    return redirect(url_for('operator.lapor_pakai'))
+    return redirect(url_for('operator.input_data'))
 
 @ops_bp.route('/update-cetak/<int:id>', methods=['POST'])
 @login_required
+@operator_required
 def update_cetak(id):
     record = DetailCetak.query.get_or_404(id)
     
     # Pastikan operator hanya bisa update data kecamatannya sendiri
     if record.kecamatan_id != current_user.kecamatan_id:
         flash('Unauthorized!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     nik = request.form.get('nik')
     nama = request.form.get('nama_lengkap')
@@ -292,17 +304,17 @@ def update_cetak(id):
     
     if not nik or not nama or not jenis_cetak or request.form.get('registrasi_ikd') is None:
         flash('Semua data wajib diisi, termasuk status Registrasi IKD!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     # Validasi NIK: 16 digit angka
     if not re.match(r'^\d{16}$', nik):
         flash('NIK harus terdiri dari 16 digit angka!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     # Validasi Nama Lengkap: huruf kapital, spasi, dash, kutip
     if not re.match(r'^[A-Z\s\'\-]+$', nama):
         flash('Nama Lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     # Update data dasar
     record.nik = nik
@@ -329,7 +341,7 @@ def update_cetak(id):
             # Validasi penerima jika diambil
             if not penerima or not re.match(r'^[A-Z\s\'\-]+$', penerima):
                 flash('Nama pengambil harus valid (Huruf Kapital)!', 'danger')
-                return redirect(url_for('operator.lapor_pakai'))
+                return redirect(url_for('operator.input_data'))
                 
             record.status_ambil = True
             record.hubungan = hubungan
@@ -342,17 +354,18 @@ def update_cetak(id):
 
     db.session.commit()
     flash('Data cetakan berhasil diperbarui', 'success')
-    return redirect(url_for('operator.lapor_pakai'))
+    return redirect(url_for('operator.input_data'))
 
 @ops_bp.route('/delete-cetak/<int:id>', methods=['GET'])
 @login_required
+@operator_required
 def delete_cetak(id):
     record = DetailCetak.query.get_or_404(id)
     
     # Pastikan operator hanya bisa delete data kecamatannya sendiri
     if record.kecamatan_id != current_user.kecamatan_id:
         flash('Unauthorized!', 'danger')
-        return redirect(url_for('operator.lapor_pakai'))
+        return redirect(url_for('operator.input_data'))
     
     # Jika belum diambil, kembalikan stok
     if not record.status_ambil:
@@ -372,10 +385,11 @@ def delete_cetak(id):
     db.session.delete(record)
     db.session.commit()
     flash('Data cetakan berhasil dihapus', 'success')
-    return redirect(url_for('operator.lapor_pakai'))
+    return redirect(url_for('operator.input_data'))
 
 @ops_bp.route('/profil', methods=['GET', 'POST'])
 @login_required
+@operator_required
 def profil():
     from werkzeug.security import generate_password_hash
     
@@ -431,4 +445,6 @@ def profil():
             db.session.commit()
             flash('Password berhasil diperbarui!', 'success')
     
-    return render_template('operator/profil.html')
+    return render_template('internal/profil.html')
+
+
