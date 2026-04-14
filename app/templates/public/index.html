@@ -5,6 +5,7 @@
 {% block styles %}
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public/map-interactive.css') }}" />
 <!-- DataTables CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/datatables/jquery.dataTables.min.css') }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/public/index.css') }}">
@@ -160,10 +161,7 @@
                         {% for item in stock_data %}
                         <tr class="hover:bg-blue-50/50 transition-all duration-300 group">
                             <td class="px-4 md:px-8 py-6">
-                                <div>
-                                    <p class="font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors text-sm md:text-base leading-tight">{{ item['nama_kecamatan'] }}</p>
-                                    <p class="text-[0.6rem] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Kabupaten Garut</p>
-                                </div>
+                                <p class="font-extrabold text-slate-700 group-hover:text-slate-900 transition-colors text-sm md:text-base leading-tight">{{ item['nama_kecamatan'] }}</p>
                             </td>
                             <td class="px-4 md:px-8 py-6 text-right" data-order="{{ item['jumlah_ktp'] }}">
                                 <div class="inline-flex flex-col items-end">

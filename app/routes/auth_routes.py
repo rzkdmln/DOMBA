@@ -11,7 +11,7 @@ from flask import session
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute", methods=['POST'])
 def login():
     if request.method == 'POST':
         # Captcha Validation
@@ -115,3 +115,7 @@ def logout():
     logout_user()
     flash('Anda telah logout dari sistem.', 'info')
     return redirect(url_for('auth.login'))
+
+
+
+

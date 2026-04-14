@@ -102,8 +102,60 @@ $(document).ready(function() {
     let markers = [];
     let activeFilters = [];
 
+    function escapeHtml(unsafe) {
+        return String(unsafe)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function makeGoogleMapsDirectionsUrl(lat, lng) {
+        const url = new URL('https://www.google.com/maps/dir/');
+        url.searchParams.set('api', '1');
+        url.searchParams.set('destination', `${lat},${lng}`);
+        url.searchParams.set('travelmode', 'driving');
+        url.searchParams.set('dir_action', 'navigate');
+        return url.toString();
+    }
+
     // Load GeoJSON and calculate centroids
     let kecamatanCoords = {};
+    let googleMapsCoords = {}; // Koordinat presisi hanya untuk Google Maps link
+
+    function loadGoogleMapsCoords() {
+        return fetch('/static/data/kantor_kecamatan_overrides.json')
+            .then(r => (r.ok ? r.json() : null))
+            .then(data => {
+                if (data && typeof data === 'object') {
+                    // Ambil semua key kecuali 'comment'
+                    for (const [key, coords] of Object.entries(data)) {
+                        if (key !== 'comment' && Array.isArray(coords) && coords.length === 2) {
+                            googleMapsCoords[key] = coords;
+                        }
+                    }
+                }
+            })
+            .catch(() => {
+                // optional file; ignore errors
+            });
+    }
+
+    function getGoogleMapsCoords(name, cleanName) {
+        if (name && googleMapsCoords[name]) return googleMapsCoords[name];
+        if (cleanName && googleMapsCoords[cleanName]) return googleMapsCoords[cleanName];
+        return null;
+    }
+
+    function normalizeKecamatanName(cleanName) {
+        if (!cleanName) return cleanName;
+        const trimmed = String(cleanName).trim();
+        // GeoJSON memakai singkatan "Bl. Limbangan"
+        if (/^(blubur|balubur)\s+limbangan$/i.test(trimmed)) return 'Bl. Limbangan';
+        return trimmed;
+    }
+
     fetch('/static/data/garut_kecamatan.geojson')
         .then(response => response.json())
         .then(data => {
@@ -113,8 +165,8 @@ $(document).ready(function() {
                 const coords = centroid.geometry.coordinates;
                 kecamatanCoords[name] = [coords[1], coords[0]]; // Leaflet uses [lat, lng]
             });
-            // Now place markers
-            placeMarkers();
+            // Load optional Google Maps overrides, then place markers
+            return loadGoogleMapsCoords().finally(() => placeMarkers());
         })
         .catch(error => {
             console.error('Error loading GeoJSON:', error);
@@ -162,7 +214,7 @@ $(document).ready(function() {
                 "Cibiuk": [-7.0854, 107.9267],
                 "Bl. Limbangan": [-7.0354, 107.9567]
             };
-            placeMarkers();
+            loadGoogleMapsCoords().finally(() => placeMarkers());
         });
 
     function placeMarkers() {
@@ -176,17 +228,24 @@ $(document).ready(function() {
         stockData.forEach(function(item) {
             const name = item.nama_kecamatan;
             let cleanName = name.replace(/^Kecamatan\s+/, '').replace(/^Dinas$/, 'Garut Kota');
+            cleanName = normalizeKecamatanName(cleanName);
             const stock = item.jumlah_ktp;
+            const lastUpdated = item.last_updated;
             
+            // Koordinat untuk marker peta (centroid GeoJSON lama, tetap)
             let coords;
             if (name === 'Dinas') {
-                coords = [-7.2018145, 107.8852168];
+                // Dinas di Jl. Patriot No. 12-14, Sukagalih, Kec. Tarogong Kidul
+                coords = [-7.2018056, 107.8852278];
             } else {
                 coords = kecamatanCoords[cleanName];
                 if (!coords) {
                     coords = [-7.2274 + (Math.random() - 0.5) * 0.1, 107.9087 + (Math.random() - 0.5) * 0.1];
                 }
             }
+
+            // Koordinat untuk Google Maps link (presisi, dari override)
+            let googleMapsCoord = getGoogleMapsCoords(name, cleanName) || coords;
             
             let color = '#10b981'; // green
             let category = 'tersedia';
@@ -204,21 +263,127 @@ $(document).ready(function() {
                 color: '#fff',
                 weight: 3,
                 opacity: 1,
-                fillOpacity: 0.8
+                fillOpacity: 0.8,
+                className: `map-stock-marker map-stock-marker--${category}`
             });
 
+            const safeName = escapeHtml(name);
+            const directionsUrl = makeGoogleMapsDirectionsUrl(googleMapsCoord[0], googleMapsCoord[1]);
+
+            marker.bindTooltip(
+                `
+                <div class="domba-tooltip">
+                    <div class="domba-tooltip__title">${safeName}</div>
+                    <div class="domba-tooltip__meta">Stok KTP-el: <span class="domba-tooltip__stock">${escapeHtml(stock)}</span></div>
+                </div>
+                `,
+                {
+                    direction: 'top',
+                    sticky: true,
+                    opacity: 1,
+                    offset: [0, -10],
+                    className: 'domba-map-tooltip'
+                }
+            );
+
             marker.bindPopup(`
-                <div class="p-3">
-                    <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-widest mb-1">Wilayah</div>
-                    <div class="text-lg font-black text-slate-800 mb-3">${name}</div>
-                    <div class="flex items-center gap-3">
-                        <div class="px-3 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-600">
-                            Stok: <span class="text-blue-600">${stock}</span>
+                <div class="w-80 bg-white rounded-2xl border border-slate-100 shadow-lg shadow-slate-200/50">
+                    <!-- Header -->
+                    <div class="px-5 pt-5 pb-3 border-b border-slate-100">
+                        <div class="text-lg font-black text-slate-900 truncate">${safeName}</div>
+                    </div>
+
+                    <!-- Info Grid -->
+                    <div class="px-5 py-4 space-y-3">
+                        <!-- Stok -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 text-xs">
+                                    <i class="fa-solid fa-box"></i>
+                                </div>
+                                <span class="text-[0.7rem] font-bold text-slate-500 uppercase tracking-tight">Stok</span>
+                            </div>
+                            <span class="text-base font-black text-slate-800">${escapeHtml(stock)}</span>
                         </div>
-                        <div class="w-2 h-2 rounded-full" style="background-color: ${color}"></div>
+
+                        <!-- Status -->
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black" style="background-color: ${color};">
+                                    <i class="fa-solid ${category === 'tersedia' ? 'fa-check' : category === 'terbatas' ? 'fa-exclamation' : 'fa-xmark'}"></i>
+                                </div>
+                                <span class="text-[0.7rem] font-bold text-slate-500 uppercase tracking-tight">Status</span>
+                            </div>
+                            <div class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[0.65rem] font-black uppercase tracking-wider" style="background-color: ${category === 'tersedia' ? '#ecfdf5' : category === 'terbatas' ? '#fffbeb' : '#fef2f2'}; color: ${category === 'tersedia' ? '#059669' : category === 'terbatas' ? '#b45309' : '#991b1b'};">
+                                ${category === 'tersedia' ? 'Tersedia' : category === 'terbatas' ? 'Terbatas' : 'Habis'}
+                            </div>
+                        </div>
+
+                        <!-- Last Update -->
+                        ${lastUpdated ? `
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-600 text-xs">
+                                    <i class="fa-solid fa-clock"></i>
+                                </div>
+                                <span class="text-[0.7rem] font-bold text-slate-500 uppercase tracking-tight">Update</span>
+                            </div>
+                            <span class="text-[0.75rem] font-bold text-slate-700">${escapeHtml(lastUpdated)}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="px-5 pb-5 pt-2 flex gap-2">
+                        <a href="${directionsUrl}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg text-[0.7rem] font-black transition-all border border-blue-200 active:bg-blue-200">
+                            <i class="fa-solid fa-route text-xs"></i>
+                            <span>Rute</span>
+                        </a>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(googleMapsCoord[0] + ',' + googleMapsCoord[1])}" target="_blank" rel="noopener noreferrer" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[0.7rem] font-black transition-all border border-slate-200 active:bg-slate-300">
+                            <i class="fa-solid fa-map-pin text-xs"></i>
+                            <span>Peta</span>
+                        </a>
                     </div>
                 </div>
-            `);
+            `, { maxWidth: 340, className: 'domba-popup' });
+
+            const normalStyle = {
+                radius: 12,
+                weight: 3,
+                fillOpacity: 0.8
+            };
+            const hoverStyle = {
+                radius: 16,
+                weight: 4,
+                fillOpacity: 0.95
+            };
+
+            marker.on('mouseover', function() {
+                this.setStyle(hoverStyle);
+                try { this.bringToFront(); } catch (e) {}
+                this.openTooltip();
+            });
+            marker.on('mouseout', function() {
+                this.setStyle(normalStyle);
+                this.closeTooltip();
+            });
+            marker.on('touchstart', function() {
+                this.setStyle(hoverStyle);
+                this.openTooltip();
+            });
+            marker.on('touchend', function() {
+                // Biarkan popup tetap dominan; tooltip ditutup saat selesai sentuh
+                if (!this.isPopupOpen || !this.isPopupOpen()) {
+                    this.setStyle(normalStyle);
+                }
+                this.closeTooltip();
+            });
+            marker.on('popupopen', function() {
+                this.setStyle(hoverStyle);
+            });
+            marker.on('popupclose', function() {
+                this.setStyle(normalStyle);
+            });
 
             markers.push({
                 marker: marker,
