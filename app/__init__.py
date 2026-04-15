@@ -4,10 +4,17 @@ from app.extensions import db, migrate, login_manager, talisman, csrf, limiter, 
 import click
 from flask.cli import with_appcontext
 import os
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+
+    # Praktik Enterprise: ProxyFix hanya aktif jika BUKAN mode debug (Production)
+    if not app.debug:
+        app.wsgi_app = ProxyFix(
+            app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+        )
 
     # 1. Init Extensions
     db.init_app(app)
