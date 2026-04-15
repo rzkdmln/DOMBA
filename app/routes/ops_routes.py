@@ -397,12 +397,14 @@ def profil():
         action = request.form.get('action')
         
         if action == 'update_profile':
-            nama_lengkap = request.form.get('nama_lengkap')
+            nama_lengkap = (request.form.get('nama_lengkap') or '').strip()
             
             # Validasi nama lengkap
             if not nama_lengkap:
                 flash('Nama lengkap tidak boleh kosong!', 'danger')
                 return redirect(url_for('operator.profil'))
+
+            nama_lengkap = re.sub(r'\s+', ' ', nama_lengkap).upper()
             
             # Validasi format nama lengkap
             if not re.match(r'^[A-Z\s\'\-]+$', nama_lengkap):
