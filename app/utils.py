@@ -20,7 +20,9 @@ def admin_required(f):
 def operator_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or current_user.role != 'operator':
+        # Role operator yang dipakai di aplikasi adalah 'operator_kecamatan'.
+        # Tetap izinkan 'operator' untuk kompatibilitas data lama.
+        if (not current_user.is_authenticated) or (current_user.role not in ('operator_kecamatan', 'operator')):
             abort(403)
         return f(*args, **kwargs)
     return decorated_function

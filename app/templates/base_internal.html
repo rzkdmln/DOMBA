@@ -183,7 +183,7 @@
                                 <p class="text-sm font-bold text-slate-800">{{ current_user.username }}</p>
                                 <p class="text-xs text-slate-500 uppercase">{{ current_user.role }}</p>
                             </div>
-                            <a href="{{ url_for('admin.dashboard' if current_user.role == 'admin' else 'operator.profil') }}" class="flex items-center px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
+                            <a href="{{ url_for('admin.profil' if current_user.role == 'admin_dinas' else 'operator.profil') }}" class="flex items-center px-4 py-3 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors">
                                 <i class="fa-solid fa-user-gear mr-3 text-slate-400 w-5"></i>
                                 <span>Profil Saya</span>
                             </a>

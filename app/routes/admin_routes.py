@@ -11,6 +11,7 @@ from io import BytesIO
 from datetime import datetime
 import json
 import os
+import re
 from werkzeug.utils import secure_filename
 from apscheduler.triggers.cron import CronTrigger
 
@@ -109,6 +110,58 @@ def dashboard():
                          pagination_info=pagination_info,
                          search=search,
                          status_filter=status_filter)
+
+
+@admin_bp.route('/profil', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def profil():
+    from werkzeug.security import generate_password_hash, check_password_hash
+
+    if request.method == 'POST':
+        action = request.form.get('action')
+
+        if action == 'update_profile':
+            nama_lengkap = request.form.get('nama_lengkap')
+
+            if not nama_lengkap:
+                flash('Nama lengkap tidak boleh kosong!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            if not re.match(r'^[A-Z\s\'\-]+$', nama_lengkap):
+                flash('Nama lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            current_user.nama_lengkap = nama_lengkap
+            db.session.commit()
+            flash('Nama lengkap berhasil diperbarui!', 'success')
+
+        elif action == 'change_password':
+            current_password = request.form.get('current_password')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+
+            if not current_password or not new_password or not confirm_password:
+                flash('Semua field password harus diisi!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            if new_password != confirm_password:
+                flash('Password baru dan konfirmasi password tidak cocok!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            if len(new_password) < 6:
+                flash('Password baru minimal 6 karakter!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            if not check_password_hash(current_user.password_hash, current_password):
+                flash('Password saat ini salah!', 'danger')
+                return redirect(url_for('admin.profil'))
+
+            current_user.password_hash = generate_password_hash(new_password, method='pbkdf2:sha256:600000')
+            db.session.commit()
+            flash('Password berhasil diperbarui!', 'success')
+
+    return render_template('internal/profil.html')
 
 @admin_bp.route('/monitoring-cetak')
 @login_required

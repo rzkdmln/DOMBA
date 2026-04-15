@@ -41,7 +41,7 @@
 
                 <div>
                     <label class="block text-sm font-bold text-slate-600 mb-2">Kecamatan</label>
-                    <input type="text" value="{{ current_user.kecamatan.nama_kecamatan }}" readonly
+                    <input type="text" value="{{ current_user.kecamatan.nama_kecamatan if current_user.kecamatan else 'Dinas' }}" readonly
                            class="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-700 cursor-not-allowed">
                 </div>
 
