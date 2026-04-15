@@ -659,7 +659,7 @@ def master_user():
             'next_page': pagination.next_num
         }
     
-    kecamatans = Kecamatan.query.filter(Kecamatan.kode_wilayah != '32.05.00').all()
+    kecamatans = Kecamatan.query.filter(Kecamatan.kode_wilayah != '32.05.00').order_by(Kecamatan.nama_kecamatan).all()
     
     # Calculate filtered stats for overview cards
     filtered_users_query = User.query

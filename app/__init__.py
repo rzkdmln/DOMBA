@@ -148,23 +148,6 @@ def create_app(config_class=Config):
             admin_user.role = 'admin_dinas'
             db.session.add(admin_user)
             db.session.commit()
-            click.echo("User admin default telah dibuat (username: administrator, password: administrator)")
-        else:
-            click.echo("User admin sudah ada.")
-
-        # Create a sample operator for testing
-        if not User.query.filter_by(username='operator').first():
-            kec = Kecamatan.query.filter_by(kode_wilayah='32.05.01').first()
-            if kec:
-                op_user = User()
-                op_user.username = 'operator'
-                op_user.nama_lengkap = 'Operator Sample'
-                op_user.password_hash = generate_password_hash('operator', method='pbkdf2:sha256:600000')
-                op_user.role = 'operator_kecamatan'
-                op_user.kecamatan_id = kec.id
-                db.session.add(op_user)
-                db.session.commit()
-                click.echo("User operator default telah dibuat (username: operator, password: operator)")
 
     # CLI command: Manual trigger for backup
     @app.cli.command("backup-now")
