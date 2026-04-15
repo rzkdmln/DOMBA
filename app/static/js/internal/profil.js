@@ -50,11 +50,11 @@ function initializeNamaLengkapAutoUppercase() {
 
     if (namaLengkapInput) {
         namaLengkapInput.addEventListener('input', function() {
-            // Convert to uppercase and remove invalid characters
-            let value = this.value.toUpperCase();
+            // Remove invalid characters
+            let value = this.value;
 
             // Allow only letters, spaces, hyphens, and apostrophes
-            value = value.replace(/[^A-Z\s\-']/g, '');
+            value = value.replace(/[^A-Za-z\s\-']/g, '');
 
             // Prevent multiple consecutive spaces
             value = value.replace(/\s+/g, ' ');
@@ -68,8 +68,8 @@ function initializeNamaLengkapAutoUppercase() {
         // Also handle paste events
         namaLengkapInput.addEventListener('paste', function(e) {
             setTimeout(() => {
-                let value = this.value.toUpperCase();
-                value = value.replace(/[^A-Z\s\-']/g, '');
+                let value = this.value;
+                value = value.replace(/[^A-Za-z\s\-']/g, '');
                 value = value.replace(/\s+/g, ' ');
                 this.value = value.replace(/^\s+/g, '');
             }, 0);
@@ -107,8 +107,8 @@ function initializeFormValidation() {
                 return false;
             }
 
-            if (!/^[A-Z\s\-']+$/.test(currentValue)) {
-                showAlert('Nama lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger');
+            if (!/^[A-Za-z\s\-']+$/.test(currentValue)) {
+                showAlert('Nama lengkap hanya boleh huruf, spasi, dash, atau kutip!', 'danger');
                 namaLengkap.focus();
                 return false;
             }

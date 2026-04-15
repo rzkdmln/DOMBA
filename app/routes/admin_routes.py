@@ -128,10 +128,10 @@ def profil():
                 flash('Nama lengkap tidak boleh kosong!', 'danger')
                 return redirect(url_for('admin.profil'))
 
-            nama_lengkap = re.sub(r'\s+', ' ', nama_lengkap).upper()
+            nama_lengkap = re.sub(r'\s+', ' ', nama_lengkap)
 
-            if not re.match(r'^[A-Z\s\'\-]+$', nama_lengkap):
-                flash('Nama lengkap hanya boleh huruf kapital, spasi, dash, atau kutip!', 'danger')
+            if not re.match(r"^[A-Za-z\s\'\-]+$", nama_lengkap):
+                flash('Nama lengkap hanya boleh huruf, spasi, dash, atau kutip!', 'danger')
                 return redirect(url_for('admin.profil'))
 
             current_user.nama_lengkap = nama_lengkap

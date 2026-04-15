@@ -72,7 +72,7 @@
                            value="{{ current_user.nama_lengkap }}"
                            data-original-value="{{ current_user.nama_lengkap }}"
                            placeholder="Masukkan nama lengkap"
-                           class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm uppercase"
+                              class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                            required>
                     <p class="text-xs text-slate-500 mt-1">Gunakan nama lengkap sesuai KTP-el.</p>
                 </div>
@@ -177,5 +177,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/internal/profil.js') }}"></script>
+<script src="{{ url_for('static', filename='js/internal/profil.js', v='20260415') }}"></script>
 {% endblock %}
