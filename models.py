@@ -18,13 +18,13 @@ class Kecamatan(db.Model):
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
+    nama_lengkap = db.Column(db.String(100)) # Tambahkan ini jika dibutuhkan
     password_hash = db.Column(db.String(512), nullable=False)
     role = db.Column(db.String(20), nullable=False)  # 'admin_dinas' or 'operator_kecamatan'
-
-    # Foreign Key to Kecamatan if role is 'operator_kecamatan', nullable for 'admin_dinas'
+    last_login = db.Column(db.DateTime) # Tambahkan ini supaya migrasi tidak bentrok
+    
+    # Foreign Key to Kecamatan
     kecamatan_id = db.Column(db.Integer, db.ForeignKey('kecamatan.id'), nullable=True)
-
-    # Relationship back to Kecamatan
     kecamatan = db.relationship('Kecamatan', backref='operator')
 
     def __repr__(self):

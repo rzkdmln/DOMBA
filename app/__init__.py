@@ -5,6 +5,7 @@ import click
 from flask.cli import with_appcontext
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
+import sys
 
 def create_app(config_class=Config):
     app = Flask(__name__)
@@ -139,15 +140,15 @@ def create_app(config_class=Config):
         from app.models import User
         from werkzeug.security import generate_password_hash
 
-        if not User.query.filter_by(username='admin').first():
+        if not User.query.filter_by(username='administrator').first():
             admin_user = User()
-            admin_user.username = 'admin'
+            admin_user.username = 'administrator'
             admin_user.nama_lengkap = 'Administrator Sistem'
-            admin_user.password_hash = generate_password_hash('admin', method='pbkdf2:sha256:600000')
+            admin_user.password_hash = generate_password_hash('administrator', method='pbkdf2:sha256:600000')
             admin_user.role = 'admin_dinas'
             db.session.add(admin_user)
             db.session.commit()
-            click.echo("User admin default telah dibuat (username: admin, password: admin)")
+            click.echo("User admin default telah dibuat (username: administrator, password: administrator)")
         else:
             click.echo("User admin sudah ada.")
 
@@ -297,30 +298,37 @@ def create_app(config_class=Config):
         except Exception as e:
             print(f"[SCHEDULER] Warning: Failed to initialize scheduler: {e}")
 
+    def _is_flask_db_command() -> bool:
+        # Saat menjalankan perintah migrasi (mis. `flask db upgrade`), Flask akan tetap memanggil
+        # create_app(). Auto-initialization (seed/create/cek DB) bisa mengubah skema terlebih dulu
+        # sehingga migrasi gagal (mis. DuplicateColumn). Karena itu, kita skip di mode CLI migrasi.
+        return len(sys.argv) >= 2 and sys.argv[1] == 'db'
+
     # 4. Auto-initialization on startup (Disaster Recovery Protection)
-    with app.app_context():
-        try:
-            from app.services.init_service import InitService
-            print("\n" + "="*70)
-            print("DOMBA Application Startup")
-            print("="*70)
+    if not _is_flask_db_command():
+        with app.app_context():
+            try:
+                from app.services.init_service import InitService
+                print("\n" + "="*70)
+                print("DOMBA Application Startup")
+                print("="*70)
+                
+                init_service = InitService(app, db)
+                init_result = init_service.run_initialization()
+                
+                for msg in init_result['messages']:
+                    print(f"  {msg}")
+                
+                if init_result['warnings']:
+                    for warn in init_result['warnings']:
+                        print(f"  {warn}")
+                
+                print("="*70 + "\n")
+                
+                # Initialize scheduler for automated backups
+                _init_scheduler()
             
-            init_service = InitService(app, db)
-            init_result = init_service.run_initialization()
-            
-            for msg in init_result['messages']:
-                print(f"  {msg}")
-            
-            if init_result['warnings']:
-                for warn in init_result['warnings']:
-                    print(f"  {warn}")
-            
-            print("="*70 + "\n")
-            
-            # Initialize scheduler for automated backups
-            _init_scheduler()
-        
-        except Exception as e:
-            print(f"Warning during auto-initialization: {e}")
+            except Exception as e:
+                print(f"Warning during auto-initialization: {e}")
 
     return app

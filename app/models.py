@@ -21,7 +21,7 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     nama_lengkap = db.Column(db.String(100), nullable=True)  # Nama lengkap user
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)  # Expanded for scrypt hash (170+ chars)
     role = db.Column(db.String(20), nullable=False)  # 'admin_dinas' or 'operator_kecamatan'
     created_at = db.Column(db.DateTime, default=get_gmt7_time)  # Tanggal pembuatan user
 

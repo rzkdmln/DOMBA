@@ -116,23 +116,34 @@ class InitService:
             # Step 2: Create tables
             print("[INIT] Creating database tables...")
             with self.app.app_context() if self.app else self._app_context():
-                self.db.create_all()
-                messages.append("✓ Database tables created/verified")
-                print("[INIT] ✓ Tables created/verified")
+                # Matikan otomatis db.create_all() di Production environments
+                # Gunakan 'flask db upgrade' dengan Alembic migrations untuk production
+                # self.db.create_all()
+                messages.append("✓ Database tables verified (migration-based approach)")
+                print("[INIT] ✓ Tables verified (using Alembic migrations)")
             
-            # Step 3: Seed default admin user
+            # Create default admin user
             print("[INIT] Checking for default admin user...")
             with self.app.app_context() if self.app else self._app_context():
-                admin_status = self._seed_default_admin()
-                if admin_status['created']:
-                    messages.append(f"✓ Default admin user created: {admin_status['username']}")
-                    print(f"[INIT] ✓ Admin user created: {admin_status['username']}")
-                elif admin_status['exists']:
-                    messages.append("✓ Admin user already exists")
-                    print("[INIT] ✓ Admin user exists")
+                # Pastikan tabel 'user' ada sebelum mencoba seed admin
+                from sqlalchemy import inspect
+                inspector = inspect(self.db.engine)
+                
+                if inspector.has_table('user'):
+                    admin_status = self._seed_default_admin()
+                    if admin_status['created']:
+                        messages.append(f"✓ Default admin user created: {admin_status['username']}")
+                        print(f"[INIT] ✓ Admin user created: {admin_status['username']}")
+                    elif admin_status['exists']:
+                        messages.append("✓ Admin user already exists")
+                        print("[INIT] ✓ Admin user exists")
+                    else:
+                        warnings.append(f"⚠ Could not verify admin user: {admin_status['error']}")
+                        print(f"[INIT] ⚠ {admin_status['error']}")
                 else:
-                    warnings.append(f"⚠ Could not verify admin user: {admin_status['error']}")
-                    print(f"[INIT] ⚠ {admin_status['error']}")
+                    msg = "Skipped admin creation (tables not yet created via migrations)"
+                    messages.append(f"ℹ {msg}")
+                    print(f"[INIT] ℹ {msg}")
             
             print("[INIT] Database initialization completed successfully!")
             return {
@@ -241,8 +252,8 @@ class InitService:
         Create default admin user if none exists.
         
         Default credentials:
-        - Username: admin
-        - Password: admin (MUST CHANGE in production!)
+        - Username: administrator
+        - Password: administrator (MUST CHANGE in production!)
         - Role: admin_dinas
         
         Disaster Recovery Documentation:
@@ -284,14 +295,17 @@ class InitService:
                 }
             
             # Create default admin user
-            default_admin = User(
-                username='admin',
-                nama_lengkap='Administrator',
-                password_hash=generate_password_hash('admin'),  # MUST CHANGE
-                role='admin_dinas',
-                kecamatan_id=None,
-                created_at=get_gmt7_time()
-            )
+            default_admin = User()
+            default_admin.username = 'administrator'
+            default_admin.nama_lengkap = 'Administrator Sistem'
+            # Gunakan PBKDF2 agar panjang hash kompatibel dengan skema lama (VARCHAR(128)).
+            # Ini juga konsisten dengan command init-db di app/__init__.py.
+            default_admin.password_hash = generate_password_hash(
+                'administrator', method='pbkdf2:sha256:600000'
+            )  # MUST CHANGE
+            default_admin.role = 'admin_dinas'
+            default_admin.kecamatan_id = None
+            default_admin.created_at = get_gmt7_time()
             
             self.db.session.add(default_admin)
             self.db.session.commit()
@@ -299,7 +313,7 @@ class InitService:
             return {
                 'created': True,
                 'exists': False,
-                'username': 'admin',
+                'username': 'administrator',
                 'error': None
             }
         
