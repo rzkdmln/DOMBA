@@ -59,8 +59,8 @@ function initializeNamaLengkapAutoUppercase() {
             // Prevent multiple consecutive spaces
             value = value.replace(/\s+/g, ' ');
 
-            // Trim leading/trailing spaces
-            value = value.trim();
+            // Remove leading spaces (keep trailing spaces so user can type multi-word names)
+            value = value.replace(/^\s+/g, '');
 
             this.value = value;
         });
@@ -71,7 +71,7 @@ function initializeNamaLengkapAutoUppercase() {
                 let value = this.value.toUpperCase();
                 value = value.replace(/[^A-Z\s\-']/g, '');
                 value = value.replace(/\s+/g, ' ');
-                this.value = value.trim();
+                this.value = value.replace(/^\s+/g, '');
             }, 0);
         });
     }
