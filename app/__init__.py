@@ -5,16 +5,18 @@ import click
 from flask.cli import with_appcontext
 import os
 from werkzeug.middleware.proxy_fix import ProxyFix
+from whitenoise import WhiteNoise
 import sys
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
-    # Praktik Enterprise: ProxyFix hanya aktif jika BUKAN mode debug (Production)
+    # Praktik Enterprise: ProxyFix + WhiteNoise hanya aktif jika BUKAN mode debug (Production)
     if not app.debug:
         app.wsgi_app = ProxyFix(
-            app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1
+            WhiteNoise(app.wsgi_app, root='app/static', prefix='static/'),
+            x_for=1, x_proto=1, x_host=1, x_prefix=1
         )
 
     # 1. Init Extensions
