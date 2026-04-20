@@ -9,6 +9,10 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Application root for subdirectory deployments (e.g., /domba)
+    # Set APPLICATION_ROOT in .env for production, otherwise defaults to '/'
+    APPLICATION_ROOT = os.environ.get('APPLICATION_ROOT', '/')
+    
     # Security Configurations
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'
