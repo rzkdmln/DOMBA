@@ -13,6 +13,10 @@ class Config:
     # Set APPLICATION_ROOT in .env for production, otherwise defaults to '/'
     APPLICATION_ROOT = os.environ.get('APPLICATION_ROOT', '/')
     
+    # Static URL path - prefix /domba to static URL when deployed in subdirectory
+    app_root = APPLICATION_ROOT.rstrip('/')
+    STATIC_URL_PATH = f'{app_root}/static' if app_root != '' else '/static'
+    
     # Security Configurations
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SECURE = os.environ.get('FLASK_ENV') == 'production'

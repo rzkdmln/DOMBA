@@ -9,7 +9,7 @@ from whitenoise import WhiteNoise
 import sys
 
 def create_app(config_class=Config):
-    app = Flask(__name__)
+    app = Flask(__name__, static_url_path=config_class.STATIC_URL_PATH)
     app.config.from_object(config_class)
 
     # Praktik Enterprise: ProxyFix + WhiteNoise hanya aktif jika BUKAN mode debug (Production)
