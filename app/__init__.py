@@ -14,8 +14,12 @@ def create_app(config_class=Config):
 
     # Praktik Enterprise: ProxyFix + WhiteNoise hanya aktif jika BUKAN mode debug (Production)
     if not app.debug:
+        # WhiteNoise: serve static files from app/static directory
+        # Path resolves relative to where gunicorn is started (usually /var/www/domba)
+        import os
+        static_root = os.path.join(os.path.dirname(__file__), 'static')
         app.wsgi_app = ProxyFix(
-            WhiteNoise(app.wsgi_app, root='app/static', prefix='static/'),
+            WhiteNoise(app.wsgi_app, root=static_root, prefix='static/', index_file=False),
             x_for=1, x_proto=1, x_host=1, x_prefix=1
         )
 
