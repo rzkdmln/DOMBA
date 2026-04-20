@@ -75,7 +75,7 @@
     <nav id="mainNav" class="fixed top-0 inset-x-0 z-[100] transition-all duration-500 px-4 lg:px-8 py-4">
         <div class="container mx-auto">
             <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-6 py-3 flex items-center justify-between shadow-2xl shadow-blue-900/10 transition-all duration-500">
-                <a class="flex items-center text-white no-underline group" href="/">
+                <a class="flex items-center text-white no-underline group" href="{{ url_for('public.index') }}">
                     <div class="bg-white rounded-xl">
                         <img src="{{ url_for('static', filename='img/domba.png') }}" alt="DOMBA Logo" style="width: 3rem; height: 3rem; pointer-events: none;">
                     </div>
@@ -86,7 +86,7 @@
                 </a>
                 
                 <div class="hidden lg:flex items-center space-x-10">
-                    <a class="nav-link" href="/">Beranda</a>
+                    <a class="nav-link" href="{{ url_for('public.index') }}">Beranda</a>
                     <a class="nav-link" href="#data-stok">Data Stok</a>
                     <a class="nav-link" href="#peta">Peta Sebaran</a>
                     <a href="{{ url_for('auth.login') }}" class="px-7 py-3 bg-white text-blue-800 hover:bg-blue-50 rounded-xl font-bold transition-all transform hover:scale-105 hover:shadow-xl shadow-lg shadow-white/10 active:scale-95">
@@ -106,7 +106,7 @@
             <button class="absolute top-8 right-8 text-white w-12 h-12 flex items-center justify-center bg-white/10 rounded-2xl" id="mobileMenuClose">
                 <i class="fa-solid fa-xmark text-2xl"></i>
             </button>
-            <a class="text-white text-3xl font-extrabold" href="/">Beranda</a>
+            <a class="text-white text-3xl font-extrabold" href="{{ url_for('public.index') }}">Beranda</a>
             <a class="text-white text-3xl font-extrabold" href="#data-stok">Data Stok</a>
             <a class="text-white text-3xl font-extrabold" href="#peta">Peta Sebaran</a>
             <a href="{{ url_for('auth.login') }}" class="px-12 py-5 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-2xl shadow-blue-600/40">
