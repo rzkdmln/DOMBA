@@ -37,7 +37,7 @@ def create_app(config_class=Config):
     csrf.init_app(app)
     limiter.init_app(app)
     
-    # Init Talisman with CSP
+# Init Talisman with CSP (Updated for Cloudflare Insights)
     csp = {
         'default-src': [
             '\'self\'',
@@ -45,11 +45,18 @@ def create_app(config_class=Config):
             'https://*.basemaps.cartocdn.com'
         ],
         'img-src': ['\'self\'', 'data:', 'https:', '*.tile.openstreetmap.org', 'https://*.basemaps.cartocdn.com'],
-        'connect-src': ['\'self\'', 'https://*.tile.openstreetmap.org', 'https://*.basemaps.cartocdn.com'],
+        'connect-src': [
+            '\'self\'', 
+            'https://*.tile.openstreetmap.org', 
+            'https://*.basemaps.cartocdn.com',
+            'https://cloudflareinsights.com',      # Diperlukan untuk mengirim data analitik
+            'https://static.cloudflareinsights.com'
+        ],
         'script-src': [
             '\'self\'', 
             '\'unsafe-inline\'', 
-            '\'unsafe-eval\''
+            '\'unsafe-eval\'',
+            'https://static.cloudflareinsights.com' # Mengizinkan pemuatan skrip beacon.min.js
         ],
         'style-src': [
             '\'self\'', 
