@@ -22,6 +22,123 @@
 
 ---
 
+## Quick Start Guide (5 Minutes)
+
+### Installation
+
+1. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt  # APScheduler==3.10.4 added
+   ```
+
+2. **Configure Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your DATABASE_URL and backup settings
+   ```
+
+3. **Run Database Migration**
+   ```bash
+   flask db migrate -m "Add backup models"
+   flask db upgrade
+   ```
+
+4. **Start Application**
+   ```bash
+   python app.py
+   ```
+   ✅ App will auto-create database, tables, and default admin user
+
+### Accessing Backup Dashboard
+
+1. **Login**: http://localhost:8000/auth/login
+   - Username: `admin`
+   - Password: `admin` (change immediately!)
+
+2. **Go to Backup Management**:
+   - Click Admin Dashboard
+   - Select "Manajemen Backup & Restore Database"
+   - Or direct: http://localhost:8000/admin/backup
+
+### Creating Backups
+
+**Manual Backup (Testing)**
+1. Click "Backup Sekarang" button
+2. Choose format:
+   - SQL (.sql): Text format, portable
+   - Binary (.bak): Compressed format, efficient
+3. Confirm
+4. Backup appears in history table
+
+**Scheduled Backup (Production)**
+1. Scroll to "Konfigurasi Jadwal Backup Otomatis"
+2. Check "Aktifkan Jadwal Backup Otomatis"
+3. Select days (Mon-Sun)
+4. Set time (e.g., 02:00 for 2 AM)
+5. Choose format (SQL or Binary)
+6. Set retention (days)
+7. Click "Simpan Jadwal"
+
+Backups run automatically at scheduled time.
+
+### Restoring from Backup
+
+⚠️ **WARNING**: This overwrites current database!
+
+1. Find backup in history table
+2. Click "Restore" button
+3. Read warning carefully
+4. Click "✓ Lanjutkan Restore"
+5. Wait for completion
+6. Verify data is restored
+
+### Uploading External Backups
+
+For database migration from another server:
+
+1. Section: "Upload File Backup"
+2. Drag-drop .sql or .bak file (or click to browse)
+3. Click "Upload File"
+4. File appears in history
+5. Use "Restore" button to restore when ready
+
+### File Locations
+
+| Item | Location |
+|------|----------|
+| Backups | `./backups/` (or configured BACKUP_LOCATION) |
+| Models | `app/models.py` (BackupSchedule, BackupLog) |
+| Services | `app/services/backup_service.py`, `init_service.py` |
+| Routes | `app/routes/admin_routes.py` (7 endpoints) |
+| Template | `app/templates/admin/backup.html` |
+| Frontend JS | `app/static/js/internal/admin_backup.js` |
+
+### Verification Checklist
+
+After installation, verify:
+
+- [ ] App starts without errors
+- [ ] Admin login works (admin / admin)
+- [ ] Can access `/admin/backup`
+- [ ] Can create manual backup (SQL format)
+- [ ] Backup file exists in `./backups/`
+- [ ] Backup appears in history table
+- [ ] File size > 0 MB
+- [ ] Can view backup details
+- [ ] Schedule UI loads without errors
+
+### Common Issues
+
+| Issue | Solution |
+|-------|----------|
+| `pg_dump: command not found` | Install PostgreSQL client tools |
+| `Connection refused` | Check DATABASE_URL, PostgreSQL running |
+| `Permission denied` | Check backup directory permissions |
+| `Backup file empty` | Database may be empty, check size |
+| `Restore fails` | Ensure backup file is valid, check logs |
+
+---
+
 ## Overview & Architecture
 
 ### Purpose

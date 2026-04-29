@@ -145,6 +145,14 @@ Untuk mendeploy aplikasi ini ke server produksi (VPS), silakan merujuk pada pand
 4. **Service**: Menggunakan Gunicorn dan Systemd untuk agar aplikasi berjalan di background.
 5. **Web Server**: Konfigurasi Nginx sebagai Reverse Proxy dan SSL (Certbot) untuk keamanan HTTPS.
 
+## Dokumentasi Lengkap
+
+Untuk dokumentasi lebih detail:
+
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Panduan developer lengkap (aktivasi environment, Git workflow, manajemen .env, solusi jaringan VPN)
+- **[PRODUCTION.md](PRODUCTION.md)** - Panduan deployment ke VPS lengkap (setup server, database, Nginx, SSL)
+- **[BACKUP_SYSTEM.md](BACKUP_SYSTEM.md)** - Sistem backup & restore database (quick start, technical docs, disaster recovery)
+
 ### Akses Sistem
 
 - **Dashboard Publik**: `http://127.0.0.1:8000/`
