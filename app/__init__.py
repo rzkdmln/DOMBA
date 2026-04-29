@@ -12,15 +12,22 @@ def create_app(config_class=Config):
     app = Flask(__name__, static_url_path=config_class.STATIC_URL_PATH)
     app.config.from_object(config_class)
 
-    # Praktik Enterprise: ProxyFix + WhiteNoise hanya aktif jika BUKAN mode debug (Production)
+# Praktik Enterprise: ProxyFix harus berada di lapisan terluar
     if not app.debug:
-        # WhiteNoise: serve static files from app/static directory
-        # Path resolves relative to where gunicorn is started (usually /var/www/domba)
         import os
         static_root = os.path.join(os.path.dirname(__file__), 'static')
+        
+        # 1. Bungkus dengan WhiteNoise dulu
+        app.wsgi_app = WhiteNoise(app.wsgi_app, root=static_root, prefix='static/', index_file=False)
+        
+        # 2. TERAKHIR bungkus dengan ProxyFix agar bisa membaca header 'https' dari Nginx
         app.wsgi_app = ProxyFix(
-            WhiteNoise(app.wsgi_app, root=static_root, prefix='static/', index_file=False),
-            x_for=1, x_proto=1, x_host=1, x_prefix=1
+            app.wsgi_app,
+            x_for=1, 
+            x_proto=1, 
+            x_host=1, 
+            x_port=1,
+            x_prefix=1
         )
 
     # 1. Init Extensions
