@@ -53,7 +53,7 @@ def create_app(config_class=Config):
     talisman.init_app(
         app, 
         content_security_policy=csp, 
-        force_https=False if app.debug else True,
+        force_https=False,
         permissions_policy={
             'geolocation': 'self'
         }
