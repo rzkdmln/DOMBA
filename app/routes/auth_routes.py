@@ -22,23 +22,30 @@ def login():
 
     # Check if user is already authenticated
     if current_user.is_authenticated:
-        # Check if session is from current day
-        login_date = session.get('login_date')
-        today = get_gmt7_time().date()
-        logger.debug(f"User already authenticated - login_date: {login_date}, today: {today}")
+        # TEMPORARILY DISABLED: Daily session expiration check for debugging
+        # login_date = session.get('login_date')
+        # today = get_gmt7_time().date()
+        # logger.debug(f"User already authenticated - login_date: {login_date}, today: {today}")
 
-        if login_date == today:
-            # Session is valid, redirect to appropriate dashboard
-            logger.debug(f"Session valid, redirecting to dashboard for role: {current_user.role}")
-            if current_user.role == 'admin_dinas':
-                return redirect(url_for('admin.dashboard'))
-            elif current_user.role == 'operator_kecamatan':
-                return redirect(url_for('operator.dashboard'))
-        else:
-            # Session expired, logout and continue to login
-            logger.debug("Session expired, logging out user")
-            logout_user()
-            flash('Sesi Anda telah berakhir. Silakan login kembali.', 'info')
+        # if login_date == today:
+        #     # Session is valid, redirect to appropriate dashboard
+        #     logger.debug(f"Session valid, redirecting to dashboard for role: {current_user.role}")
+        #     if current_user.role == 'admin_dinas':
+        #         return redirect(url_for('admin.dashboard'))
+        #     elif current_user.role == 'operator_kecamatan':
+        #         return redirect(url_for('operator.dashboard'))
+        # else:
+        #     # Session expired, logout and continue to login
+        #     logger.debug("Session expired, logging out user")
+        #     logout_user()
+        #     flash('Sesi Anda telah berakhir. Silakan login kembali.', 'info')
+
+        # Direct redirect without session check for debugging
+        logger.debug(f"User authenticated, redirecting to dashboard for role: {current_user.role}")
+        if current_user.role == 'admin_dinas':
+            return redirect(url_for('admin.dashboard'))
+        elif current_user.role == 'operator_kecamatan':
+            return redirect(url_for('operator.dashboard'))
 
     if request.method == 'POST':
         logger.debug("Processing POST login request")
