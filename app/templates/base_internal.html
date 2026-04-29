@@ -121,7 +121,7 @@
                             <i class="fa-solid fa-database mr-4 w-5 text-center transition-all duration-300"></i>
                             <span class="sidebar-text">Backup Data</span>
                         </a>
-                    {% else %}
+                    {% elif current_user.role == 'operator_kecamatan' %}
                         <a class="sidebar-nav-link {% if request.endpoint == 'operator.dashboard' %}active{% endif %}" href="{{ url_for('operator.dashboard') }}">
                             <i class="fa-solid fa-gauge mr-4 w-5 text-center transition-all duration-300"></i>
                             <span class="sidebar-text">Dashboard</span>
@@ -135,6 +135,13 @@
                             <span class="sidebar-text">Daftar Cetak</span>
                         </a>
                     {% endif %}
+
+                    <!-- Public Page Link with Border Separator -->
+                    <div class="border-t border-white/10 my-2"></div>
+                    <a class="sidebar-nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                        <i class="fa-solid fa-globe mr-4 w-5 text-center transition-all duration-300"></i>
+                        <span class="sidebar-text">Halaman Utama</span>
+                    </a>
                 </nav>
             </div>
         </aside>

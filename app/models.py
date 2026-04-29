@@ -10,6 +10,7 @@ class Kecamatan(db.Model):
     kode_wilayah = db.Column(db.String(20), unique=True, nullable=False)
     latitude = db.Column(db.Float)
     longitude = db.Column(db.Float)
+    is_active = db.Column(db.Boolean, default=True)  # Status layanan kecamatan
 
     # One-to-One relationship with Stok
     stok = db.relationship('Stok', backref='kecamatan', uselist=False)
@@ -170,3 +171,53 @@ class BackupLog(db.Model):
         """Helper: Format file size as MB string"""
         mb = self.file_size / (1024 * 1024)
         return f"{mb:.2f} MB"
+
+# ============================================================================
+# DOKUMEN TRANSAKSI MODEL
+# ============================================================================
+
+class DokumenTransaksi(db.Model):
+    """
+    Model untuk menyimpan dokumen terkait transaksi stok masuk (PDF, JPG, PNG).
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    transaksi_id = db.Column(db.Integer, db.ForeignKey('transaksi.id'), nullable=False)
+    nama_file = db.Column(db.String(255), nullable=False)  # Nama file asli
+    path_file = db.Column(db.String(512), nullable=False)  # Path file di server
+    tipe_file = db.Column(db.String(20), nullable=False)  # 'PDF', 'JPG', 'PNG'
+    ukuran_file = db.Column(db.BigInteger, default=0)  # Ukuran dalam bytes
+    created_at = db.Column(db.DateTime, default=get_gmt7_time)
+
+    # Relationships
+    transaksi = db.relationship('Transaksi', backref='dokumen')
+
+    def __repr__(self):
+        return f'<DokumenTransaksi {self.nama_file}>'
+
+    def get_file_size_mb(self):
+        """Helper: Format file size as MB string"""
+        mb = self.ukuran_file / (1024 * 1024)
+        return f"{mb:.2f} MB"
+
+# ============================================================================
+# STATUS LAYANAN KECAMATAN MODEL
+# ============================================================================
+
+class StatusLayananLog(db.Model):
+    """
+    Log history perubahan status layanan kecamatan.
+    """
+    id = db.Column(db.Integer, primary_key=True)
+    kecamatan_id = db.Column(db.Integer, db.ForeignKey('kecamatan.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status_sebelum = db.Column(db.Boolean, nullable=False)
+    status_sesudah = db.Column(db.Boolean, nullable=False)
+    alasan = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime, default=get_gmt7_time)
+
+    # Relationships
+    kecamatan = db.relationship('Kecamatan', backref='status_layanan_logs')
+    user = db.relationship('User', backref='status_layanan_logs')
+
+    def __repr__(self):
+        return f'<StatusLayananLog Kecamatan {self.kecamatan_id} by User {self.user_id}>'

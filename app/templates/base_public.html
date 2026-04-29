@@ -89,9 +89,6 @@
                     <a class="nav-link" href="{{ url_for('public.index') }}">Beranda</a>
                     <a class="nav-link" href="#data-stok">Data Stok</a>
                     <a class="nav-link" href="#peta">Peta Sebaran</a>
-                    <a href="{{ url_for('auth.login') }}" class="px-7 py-3 bg-white text-blue-800 hover:bg-blue-50 rounded-xl font-bold transition-all transform hover:scale-105 hover:shadow-xl shadow-lg shadow-white/10 active:scale-95">
-                        <i class="fa-solid"></i> Login Petugas
-                    </a>
                 </div>
 
                 <!-- Mobile Menu Toggle -->
@@ -109,9 +106,6 @@
             <a class="text-white text-3xl font-extrabold" href="{{ url_for('public.index') }}">Beranda</a>
             <a class="text-white text-3xl font-extrabold" href="#data-stok">Data Stok</a>
             <a class="text-white text-3xl font-extrabold" href="#peta">Peta Sebaran</a>
-            <a href="{{ url_for('auth.login') }}" class="px-12 py-5 bg-blue-600 text-white rounded-2xl font-black text-xl shadow-2xl shadow-blue-600/40">
-                Login Petugas
-            </a>
         </div>
     </nav>
 
@@ -148,6 +142,7 @@
                         <li><a href="#" class="text-lg hover:text-blue-500 transition-colors flex items-center gap-3"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span> Beranda</a></li>
                         <li><a href="#data-stok" class="text-lg hover:text-blue-500 transition-colors flex items-center gap-3"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span> Data Stok</a></li>
                         <li><a href="#peta" class="text-lg hover:text-blue-500 transition-colors flex items-center gap-3"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span> Peta Sebaran</a></li>
+                        <li><a href="{{ url_for('auth.login') }}" class="text-lg hover:text-blue-500 transition-colors flex items-center gap-3"><span class="w-1.5 h-1.5 bg-blue-600 rounded-full"></span> Login Petugas</a></li>
                     </ul>
                 </div>
                 

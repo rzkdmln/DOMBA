@@ -16,7 +16,140 @@ function openEditModal(button) {
     document.getElementById('edit_jumlah').value = jumlah;
     document.getElementById('edit_tanggal').value = tanggal;
     document.getElementById('edit_keterangan').value = keterangan;
+    
+    // Load existing documents
+    loadEditDocuments(id);
+    
     document.getElementById('editModal').classList.remove('hidden');
+}
+
+function loadEditDocuments(transaksiId) {
+    const existingDocsDiv = document.getElementById('editExistingDocs');
+    existingDocsDiv.innerHTML = '<p class="text-slate-400 text-sm">Memuat dokumen...</p>';
+    
+    fetch(`/admin/view_dokumen/${transaksiId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                existingDocsDiv.innerHTML = '';
+                
+                if (data.dokumen.length === 0) {
+                    existingDocsDiv.innerHTML = '<p class="text-slate-400 text-sm italic">Tidak ada dokumen.</p>';
+                } else {
+                    data.dokumen.forEach(doc => {
+                        const docItem = document.createElement('div');
+                        docItem.className = 'flex items-center justify-between p-3 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors';
+                        docItem.innerHTML = `
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-file-pdf text-purple-600 text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-800 text-sm">${doc.nama_file}</p>
+                                    <p class="text-[0.65rem] text-slate-500">${doc.ukuran_file}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <a href="/admin/serve_dokumen/${doc.id}" target="_blank" class="px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold hover:bg-purple-700 transition-colors">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <button onclick="deleteDocument(${doc.id}, ${transaksiId})" class="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-semibold hover:bg-rose-600 transition-colors">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                        existingDocsDiv.appendChild(docItem);
+                    });
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            existingDocsDiv.innerHTML = '<p class="text-rose-500 text-sm">Gagal memuat dokumen.</p>';
+        });
+}
+
+function deleteDocument(docId, transaksiId) {
+    Swal.fire({
+        title: 'Hapus Dokumen?',
+        text: 'Dokumen yang dihapus tidak dapat dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            fetch(`/admin/delete_dokumen/${docId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        title: 'Berhasil!',
+                        text: 'Dokumen berhasil dihapus.',
+                        icon: 'success',
+                        confirmButtonColor: '#3b82f6'
+                    });
+                    loadEditDocuments(transaksiId);
+                } else {
+                    Swal.fire({
+                        title: 'Gagal!',
+                        text: data.message || 'Gagal menghapus dokumen.',
+                        icon: 'error',
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Gagal!',
+                    text: 'Terjadi kesalahan saat menghapus dokumen.',
+                    icon: 'error',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
+        }
+    });
+}
+
+function deleteStokMasuk(button) {
+    const transaksiId = button.dataset.id;
+    
+    Swal.fire({
+        title: 'Hapus Transaksi?',
+        text: 'Data transaksi yang dihapus tidak dapat dikembalikan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Hapus',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/delete_stok_masuk/${transaksiId}`;
+            
+            const csrfToken = document.querySelector('input[name="csrf_token"]');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrf_token';
+                csrfInput.value = csrfToken.value;
+                form.appendChild(csrfInput);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+        }
+    });
 }
 
 function closeEditModal() {
@@ -42,6 +175,53 @@ function openViewModal(button) {
 
 function closeViewModal() {
     document.getElementById('viewModal').classList.add('hidden');
+}
+
+function viewDokumen(button) {
+    const transaksiId = button.dataset.id;
+    
+    fetch(`/admin/view_dokumen/${transaksiId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const dokumenList = document.getElementById('dokumenList');
+                dokumenList.innerHTML = '';
+                
+                if (data.dokumen.length === 0) {
+                    dokumenList.innerHTML = '<p class="text-slate-500 text-center py-8">Tidak ada dokumen untuk transaksi ini.</p>';
+                } else {
+                    data.dokumen.forEach(doc => {
+                        const docItem = document.createElement('div');
+                        docItem.className = 'flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors';
+                        docItem.innerHTML = `
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-file-pdf text-purple-600"></i>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800">${doc.nama_file}</p>
+                                    <p class="text-xs text-slate-500">${doc.ukuran_file} • ${doc.created_at}</p>
+                                </div>
+                            </div>
+                            <a href="/admin/serve_dokumen/${doc.id}" target="_blank" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
+                                <i class="fa-solid fa-eye mr-2"></i>Lihat
+                            </a>
+                        `;
+                        dokumenList.appendChild(docItem);
+                    });
+                }
+                
+                document.getElementById('dokumenModal').classList.remove('hidden');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Gagal memuat dokumen.');
+        });
+}
+
+function closeDokumenModal() {
+    document.getElementById('dokumenModal').classList.add('hidden');
 }
 
 function initSorting() {
@@ -84,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const editModal = document.getElementById('editModal');
     const viewModal = document.getElementById('viewModal');
+    const dokumenModal = document.getElementById('dokumenModal');
 
     if (editModal) {
         editModal.addEventListener('click', function(e) {
@@ -97,6 +278,14 @@ document.addEventListener('DOMContentLoaded', function() {
         viewModal.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeViewModal();
+            }
+        });
+    }
+
+    if (dokumenModal) {
+        dokumenModal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDokumenModal();
             }
         });
     }

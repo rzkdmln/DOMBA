@@ -239,6 +239,13 @@
             
             <div class="lg:col-span-8 relative reveal">
                 <div id="map" data-stock='{{ stock_data|tojson }}'></div>
+                <!-- Map Instruction Overlay (Mobile Only) -->
+                <div id="mapInstruction" class="lg:hidden absolute inset-0 flex items-center justify-center pointer-events-none z-[1000] transition-opacity duration-500">
+                    <div class="bg-black/50 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-medium">
+                        <i class="fa-solid fa-hand-pointer mr-2"></i>
+                        Geser untuk navigasi peta
+                    </div>
+                </div>
             </div>
         </div>
     </div>

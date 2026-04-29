@@ -77,3 +77,12 @@
 #map .leaflet-popup-close-button {
   display: none;
 }
+
+/* Mobile-specific map sizing */
+@media (max-width: 1023px) {
+  #map {
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    height: auto;
+  }
+}

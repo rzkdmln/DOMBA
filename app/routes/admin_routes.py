@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import login_required, current_user
-from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak, BackupSchedule, BackupLog
+from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak, BackupSchedule, BackupLog, DokumenTransaksi, StatusLayananLog
 from app.extensions import db
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
@@ -14,6 +14,7 @@ import os
 import re
 from werkzeug.utils import secure_filename
 from apscheduler.triggers.cron import CronTrigger
+from PIL import Image
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -855,6 +856,77 @@ def stok_masuk():
         )
         
         db.session.add(transaksi)
+        db.session.flush()
+        
+        # 3. Handle File Uploads
+        uploaded_files = request.files.getlist('dokumen')
+        total_size = 0
+        max_total_size = 10 * 1024 * 1024  # 10MB
+        
+        for file in uploaded_files:
+            if file and file.filename:
+                # Check file type
+                allowed_extensions = {'pdf', 'jpg', 'jpeg', 'png'}
+                file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+                
+                if file_ext not in allowed_extensions:
+                    flash(f'File {file.filename} tidak diizinkan. Hanya PDF, JPG, PNG.', 'danger')
+                    db.session.rollback()
+                    return redirect(url_for('admin.stok_masuk'))
+                
+                # Check total size
+                total_size += len(file.read())
+                file.seek(0)  # Reset file pointer
+                
+                if total_size > max_total_size:
+                    flash('Total ukuran file melebihi 10MB.', 'danger')
+                    db.session.rollback()
+                    return redirect(url_for('admin.stok_masuk'))
+        
+        # Create upload directory
+        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'stok_masuk',
+                                  get_gmt7_time().strftime('%Y'),
+                                  get_gmt7_time().strftime('%m'),
+                                  str(transaksi.id))
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Process and save files
+        for file in uploaded_files:
+            if file and file.filename:
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+
+                # Convert image to PDF if needed
+                if file_ext in ['jpg', 'jpeg', 'png']:
+                    try:
+                        img = Image.open(file)
+                        # Convert to RGB if necessary
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+
+                        pdf_filename = f"{os.path.splitext(filename)[0]}.pdf"
+                        file_path = os.path.join(upload_dir, pdf_filename)
+                        img.save(file_path, 'PDF', resolution=100.0)
+                        file_ext = 'pdf'
+                        filename = pdf_filename
+                    except Exception as e:
+                        flash(f'Gagal convert {filename} ke PDF: {str(e)}', 'danger')
+                        continue
+                else:
+                    # Save PDF as-is
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
+
+                # Save to database
+                dokumen = DokumenTransaksi(
+                    transaksi_id=transaksi.id,
+                    nama_file=filename,
+                    path_file=file_path,
+                    tipe_file=file_ext.upper(),
+                    ukuran_file=os.path.getsize(file_path)
+                )
+                db.session.add(dokumen)
+        
         db.session.commit()
         
         flash(f'Berhasil menambah {jumlah} blangko ke Dinas dari {sumber}.', 'success')
@@ -868,6 +940,127 @@ def stok_masuk():
     return render_template('admin/stok_masuk.html', 
                          recent_masuk=recent_masuk, 
                          today_date=get_gmt7_time().strftime('%Y-%m-%d'))
+
+@admin_bp.route('/view_dokumen/<int:transaksi_id>')
+@login_required
+@admin_required
+def view_dokumen(transaksi_id):
+    """Get list of documents for a transaction"""
+    transaksi = Transaksi.query.get_or_404(transaksi_id)
+    dokumen_list = DokumenTransaksi.query.filter_by(transaksi_id=transaksi_id).all()
+    
+    result = []
+    for doc in dokumen_list:
+        result.append({
+            'id': doc.id,
+            'nama_file': doc.nama_file,
+            'tipe_file': doc.tipe_file,
+            'ukuran_file': doc.get_file_size_mb(),
+            'created_at': doc.created_at.strftime('%d %b %Y, %H:%M')
+        })
+    
+    return jsonify({'success': True, 'dokumen': result})
+
+@admin_bp.route('/serve_dokumen/<int:doc_id>')
+@login_required
+@admin_required
+def serve_dokumen(doc_id):
+    """Serve a document file"""
+    dokumen = DokumenTransaksi.query.get_or_404(doc_id)
+    
+    if not os.path.exists(dokumen.path_file):
+        flash('File tidak ditemukan.', 'danger')
+        return redirect(url_for('admin.stok_masuk'))
+    
+    return send_file(dokumen.path_file, as_attachment=False, download_name=dokumen.nama_file)
+
+@admin_bp.route('/delete_dokumen/<int:doc_id>', methods=['POST'])
+@login_required
+@admin_required
+def delete_dokumen(doc_id):
+    """Delete a document"""
+    dokumen = DokumenTransaksi.query.get_or_404(doc_id)
+    
+    # Delete file from filesystem
+    if os.path.exists(dokumen.path_file):
+        try:
+            os.remove(dokumen.path_file)
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+    
+    # Delete from database
+    db.session.delete(dokumen)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Dokumen berhasil dihapus'})
+
+@admin_bp.route('/toggle_layanan/<int:kecamatan_id>', methods=['POST'])
+@login_required
+def toggle_layanan(kecamatan_id):
+    """Toggle status layanan kecamatan"""
+    kecamatan = Kecamatan.query.get_or_404(kecamatan_id)
+    
+    # Permission check
+    if current_user.role == 'operator_kecamatan':
+        if current_user.kecamatan_id != kecamatan_id:
+            return jsonify({'success': False, 'message': 'Anda tidak memiliki izin untuk mengubah status kecamatan ini.'}), 403
+    elif current_user.role != 'admin_dinas':
+        return jsonify({'success': False, 'message': 'Role tidak valid.'}), 403
+    
+    # Get alasan from request
+    alasan = request.json.get('alasan', '') if request.is_json else ''
+    
+    # Log status change
+    status_sebelum = kecamatan.is_active
+    status_sesudah = not status_sebelum
+    
+    log = StatusLayananLog(
+        kecamatan_id=kecamatan_id,
+        user_id=current_user.id,
+        status_sebelum=status_sebelum,
+        status_sesudah=status_sesudah,
+        alasan=alasan
+    )
+    
+    # Toggle status
+    kecamatan.is_active = status_sesudah
+    
+    db.session.add(log)
+    db.session.commit()
+    
+    status_text = 'aktif' if status_sesudah else 'nonaktif'
+    return jsonify({
+        'success': True, 
+        'message': f'Layanan {kecamatan.nama_kecamatan} berhasil diubah menjadi {status_text}.'
+    })
+
+@admin_bp.route('/status_layanan_history/<int:kecamatan_id>')
+@login_required
+def status_layanan_history(kecamatan_id):
+    """Get history of status changes for a kecamatan"""
+    kecamatan = Kecamatan.query.get_or_404(kecamatan_id)
+    
+    # Permission check
+    if current_user.role == 'operator_kecamatan':
+        if current_user.kecamatan_id != kecamatan_id:
+            return jsonify({'success': False, 'message': 'Anda tidak memiliki izin.'}), 403
+    elif current_user.role != 'admin_dinas':
+        return jsonify({'success': False, 'message': 'Role tidak valid.'}), 403
+    
+    logs = StatusLayananLog.query.filter_by(kecamatan_id=kecamatan_id)\
+        .order_by(StatusLayananLog.created_at.desc()).limit(20).all()
+    
+    result = []
+    for log in logs:
+        result.append({
+            'user': log.user.username,
+            'status_sebelum': 'Aktif' if log.status_sebelum else 'Nonaktif',
+            'status_sesudah': 'Aktif' if log.status_sesudah else 'Nonaktif',
+            'alasan': log.alasan or '-',
+            'created_at': log.created_at.strftime('%d %b %Y, %H:%M')
+        })
+    
+    return jsonify({'success': True, 'history': result})
 
 @admin_bp.route('/edit_stok_masuk', methods=['POST'])
 @login_required
@@ -896,6 +1089,75 @@ def edit_stok_masuk():
     if tanggal_baru:
         transaksi.created_at = datetime.strptime(tanggal_baru + ' ' + transaksi.created_at.strftime('%H:%M:%S'), '%Y-%m-%d %H:%M:%S')
     
+    # Handle document uploads
+    files = request.files.getlist('dokumen')
+    if files:
+        allowed_extensions = {'.pdf', '.jpg', '.jpeg', '.png'}
+        max_total_size = 10 * 1024 * 1024  # 10MB
+        
+        total_size = 0
+        for file in files:
+            if file and file.filename:
+                total_size += len(file.read())
+                file.seek(0)  # Reset file pointer
+        
+        if total_size > max_total_size:
+            flash('Total ukuran file melebihi 10MB.', 'danger')
+            return redirect(url_for('admin.stok_masuk'))
+        
+        # Create upload directory if not exists
+        now = get_gmt7_time()
+        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'stok_masuk', 
+                                    now.strftime('%Y'), now.strftime('%m'), str(transaksi_id))
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        for file in files:
+            if file and file.filename:
+                file_ext = os.path.splitext(file.filename)[1].lower()
+                
+                if file_ext not in allowed_extensions:
+                    flash(f'File {file.filename} tidak diizinkan. Hanya PDF, JPG, PNG.', 'danger')
+                    continue
+                
+                # Convert images to PDF
+                if file_ext in {'.jpg', '.jpeg', '.png'}:
+                    try:
+                        img = Image.open(file)
+                        # Convert to RGB if necessary
+                        if img.mode != 'RGB':
+                            img = img.convert('RGB')
+                        
+                        # Save as PDF
+                        pdf_filename = secure_filename(file.filename.rsplit('.', 1)[0] + '.pdf')
+                        pdf_path = os.path.join(upload_dir, pdf_filename)
+                        img.save(pdf_path, 'PDF', resolution=100.0)
+                        
+                        # Store metadata
+                        new_doc = DokumenTransaksi(
+                            transaksi_id=transaksi_id,
+                            nama_file=pdf_filename,
+                            tipe_file='application/pdf',
+                            path_file=pdf_path
+                        )
+                        db.session.add(new_doc)
+                    except Exception as e:
+                        print(f"Error converting image to PDF: {e}")
+                        flash(f'Gagal mengkonversi {file.filename} ke PDF.', 'danger')
+                else:
+                    # Save PDF directly
+                    filename = secure_filename(file.filename)
+                    file_path = os.path.join(upload_dir, filename)
+                    file.save(file_path)
+                    
+                    # Store metadata
+                    new_doc = DokumenTransaksi(
+                        transaksi_id=transaksi_id,
+                        nama_file=filename,
+                        tipe_file='application/pdf',
+                        path_file=file_path
+                    )
+                    db.session.add(new_doc)
+    
     db.session.commit()
     
     flash('Transaksi berhasil diupdate.', 'success')
@@ -914,7 +1176,7 @@ def delete_stok_masuk(transaksi_id):
     dinas = Kecamatan.query.filter_by(kode_wilayah='32.05.00').first()
     stok_dinas = Stok.query.filter_by(kecamatan_id=dinas.id).first()
     if stok_dinas:
-        stok_dinas.jumlah_ktp = Stok.jumlah_ktp - transaksi.jumlah_ktp
+        stok_dinas.jumlah_ktp = stok_dinas.jumlah_ktp - transaksi.jumlah_ktp
     
     db.session.delete(transaksi)
     db.session.commit()

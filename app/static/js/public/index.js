@@ -99,8 +99,42 @@ $(document).ready(function() {
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
     }).addTo(map);
 
+    // Remove attribution control
+    map.attributionControl.remove();
+
     let markers = [];
     let activeFilters = [];
+
+    // Mobile map interaction state
+    let mapInteractionEnabled = false;
+    let lastTapTime = 0;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 1024;
+
+    // Fade out instruction overlay on map interaction
+    const mapInstruction = document.getElementById('mapInstruction');
+    if (mapInstruction) {
+        let hasInteracted = false;
+
+        function fadeOutInstruction() {
+            if (!hasInteracted) {
+                hasInteracted = true;
+                mapInstruction.style.opacity = '0';
+                setTimeout(() => {
+                    mapInstruction.style.display = 'none';
+                }, 500);
+            }
+        }
+
+        // Listen for map movement events
+        map.on('movestart', fadeOutInstruction);
+        map.on('zoomstart', fadeOutInstruction);
+        map.on('dragstart', fadeOutInstruction);
+
+        // Also fade out on touch/click for mobile
+        if (isMobile) {
+            map.on('click', fadeOutInstruction);
+        }
+    }
 
     function escapeHtml(unsafe) {
         return String(unsafe)
@@ -449,4 +483,5 @@ $(document).ready(function() {
             behavior: 'smooth'
         });
     });
+
 });

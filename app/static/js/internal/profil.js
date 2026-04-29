@@ -323,3 +323,136 @@ function updatePasswordStrengthDisplay(strength) {
     strengthText.textContent = level;
     strengthText.className = `text-xs font-bold ${score === 0 ? 'text-slate-400' : score <= 40 ? 'text-red-500' : score <= 60 ? 'text-yellow-600' : score <= 80 ? 'text-blue-600' : 'text-green-600'}`;
 }
+
+// Status Layanan Toggle Functionality
+let currentStatus = true;
+let kecamatanId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize status layanan if operator
+    const toggleBtn = document.getElementById('toggleStatusBtn');
+    if (toggleBtn) {
+        kecamatanId = document.getElementById('kecamatanId')?.value;
+        if (kecamatanId) {
+            loadStatusLayanan();
+        }
+    }
+});
+
+function loadStatusLayanan() {
+    // Fetch current status from backend
+    fetch(`/admin/status_layanan_history/${kecamatanId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.history.length > 0) {
+                // Get the latest status from history
+                currentStatus = data.history[0].status_sesudah === 'Aktif';
+            } else {
+                // Default to active if no history
+                currentStatus = true;
+            }
+            updateToggleUI();
+            loadHistoryLog();
+        })
+        .catch(error => {
+            console.error('Error loading status:', error);
+            currentStatus = true;
+            updateToggleUI();
+        });
+}
+
+function toggleStatus() {
+    document.getElementById('alasanContainer').classList.remove('hidden');
+}
+
+function confirmToggle() {
+    const alasan = document.getElementById('alasanInput').value;
+    const newStatus = !currentStatus;
+    
+    // Send toggle request to backend
+    fetch(`/admin/toggle_layanan/${kecamatanId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ alasan: alasan })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            currentStatus = newStatus;
+            updateToggleUI();
+            
+            document.getElementById('alasanContainer').classList.add('hidden');
+            document.getElementById('alasanInput').value = '';
+            
+            showAlert(data.message, 'success');
+            loadHistoryLog();
+        } else {
+            showAlert(data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error toggling status:', error);
+        showAlert('Gagal mengubah status layanan.', 'error');
+    });
+}
+
+function cancelToggle() {
+    document.getElementById('alasanContainer').classList.add('hidden');
+    document.getElementById('alasanInput').value = '';
+}
+
+function updateToggleUI() {
+    const toggleBtn = document.getElementById('toggleStatusBtn');
+    const toggleKnob = document.getElementById('toggleKnob');
+    const statusText = document.getElementById('statusText');
+    
+    if (currentStatus) {
+        toggleBtn.classList.add('bg-orange-500');
+        toggleBtn.classList.remove('bg-slate-300');
+        toggleKnob.classList.add('translate-x-6');
+        toggleKnob.classList.remove('translate-x-1');
+        statusText.textContent = 'Layanan Aktif';
+        statusText.classList.add('text-green-600');
+        statusText.classList.remove('text-red-600');
+    } else {
+        toggleBtn.classList.remove('bg-orange-500');
+        toggleBtn.classList.add('bg-slate-300');
+        toggleKnob.classList.remove('translate-x-6');
+        toggleKnob.classList.add('translate-x-1');
+        statusText.textContent = 'Layanan Nonaktif';
+        statusText.classList.remove('text-green-600');
+        statusText.classList.add('text-red-600');
+    }
+}
+
+function loadHistoryLog() {
+    const historyLog = document.getElementById('historyLog');
+    if (!historyLog) return;
+    
+    // Fetch history from backend
+    fetch(`/admin/status_layanan_history/${kecamatanId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.history.length > 0) {
+                historyLog.innerHTML = '';
+                data.history.forEach(log => {
+                    const logItem = document.createElement('div');
+                    logItem.className = 'text-xs p-2 bg-slate-50 rounded-lg';
+                    logItem.innerHTML = `
+                        <p class="font-semibold text-slate-700">${log.user} - ${log.created_at}</p>
+                        <p class="text-slate-500">${log.status_sebelum} → ${log.status_sesudah}</p>
+                        <p class="text-slate-400 italic">${log.alasan}</p>
+                    `;
+                    historyLog.appendChild(logItem);
+                });
+            } else {
+                historyLog.innerHTML = '<p class="text-sm text-slate-400 italic">Belum ada riwayat perubahan.</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading history:', error);
+            historyLog.innerHTML = '<p class="text-sm text-slate-400 italic">Gagal memuat riwayat.</p>';
+        });
+}

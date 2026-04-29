@@ -84,6 +84,29 @@ def create_app(config_class=Config):
         from app.models import User
         return User.query.get(int(user_id))
 
+    # Session expiration check before each request
+    @app.before_request
+    def check_session_expiration():
+        from flask_login import current_user
+        from flask import session, redirect, url_for, request
+        from app.utils import get_gmt7_time
+
+        # Skip check for login page and static files
+        if request.path.startswith('/static') or request.path == '/auth/login':
+            return
+
+        # Check if user is authenticated
+        if current_user.is_authenticated:
+            login_date = session.get('login_date')
+            today = get_gmt7_time().date()
+
+            # If login date is different from today, logout user
+            if login_date and login_date != today:
+                from flask_login import logout_user
+                logout_user()
+                session.clear()
+                return redirect(url_for('auth.login'))
+
     # 2. Register Blueprints (Routes)
     # Kita import di dalam fungsi untuk menghindari Circular Import
     from app.routes.public_routes import public_bp

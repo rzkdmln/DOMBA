@@ -53,6 +53,48 @@
             </div>
         </div>
 
+        <!-- Status Layanan (Operator Only) -->
+        {% if current_user.role == 'operator_kecamatan' and current_user.kecamatan %}
+        <div class="bg-white rounded-2xl p-6 border border-slate-200">
+            <h4 class="text-lg font-black text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-toggle-on mr-3 text-orange-500"></i>
+                Status Layanan
+            </h4>
+
+            <div class="space-y-4">
+                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                    <div>
+                        <p class="font-bold text-slate-800">{{ current_user.kecamatan.nama_kecamatan }}</p>
+                        <p class="text-sm text-slate-500" id="statusText">Memuat status...</p>
+                    </div>
+                    <button id="toggleStatusBtn" onclick="toggleStatus()" class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2">
+                        <span id="toggleKnob" class="inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                    </button>
+                </div>
+                <input type="hidden" id="kecamatanId" value="{{ current_user.kecamatan.id }}">
+
+                <div id="alasanContainer" class="hidden">
+                    <label class="block text-sm font-bold text-slate-600 mb-2">Alasan Perubahan Status</label>
+                    <textarea id="alasanInput" rows="2" placeholder="Contoh: Pemadaman listrik, Perangkat rusak, Banjir..." class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all text-sm"></textarea>
+                    <button onclick="confirmToggle()" class="mt-2 px-4 py-2 bg-orange-600 text-white rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors">
+                        Konfirmasi Perubahan
+                    </button>
+                    <button onclick="cancelToggle()" class="mt-2 ml-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-semibold hover:bg-slate-300 transition-colors">
+                        Batal
+                    </button>
+                </div>
+
+                <!-- History Log -->
+                <div class="mt-6">
+                    <h5 class="text-sm font-bold text-slate-600 mb-3">Riwayat Perubahan</h5>
+                    <div id="historyLog" class="space-y-2 max-h-40 overflow-y-auto">
+                        <p class="text-sm text-slate-400 italic">Memuat riwayat...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Form Update Profil -->
         <div class="bg-white rounded-2xl p-6 border border-slate-200">
             <h4 class="text-lg font-black text-slate-800 mb-4 flex items-center">

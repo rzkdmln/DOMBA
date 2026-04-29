@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user  # type: ignore
 from app.extensions import db
-from app.models import DetailCetak, Stok, Transaksi
+from app.models import DetailCetak, Stok, Transaksi, Kecamatan
 from sqlalchemy.orm import joinedload
 from app.utils import get_gmt7_time, validate_cetak_data, process_stok_pengurangan, operator_required
 from app.forms import LaporPakaiForm
@@ -75,6 +75,12 @@ def export_my_cetak():
 @login_required
 @operator_required
 def input_data():
+    # Check if kecamatan is active
+    kecamatan = Kecamatan.query.get(current_user.kecamatan_id)
+    if not kecamatan.is_active:
+        flash('Layanan kecamatan Anda sedang nonaktif. Silakan aktifkan di halaman Profil untuk melanjutkan input data.', 'warning')
+        return redirect(url_for('operator.profil'))
+    
     form = LaporPakaiForm()
     
     if form.validate_on_submit():

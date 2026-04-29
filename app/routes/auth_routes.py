@@ -3,7 +3,7 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from app.models import User
 from app.extensions import db, limiter
-from datetime import datetime
+from datetime import datetime, date
 from app.utils import get_gmt7_time
 import random
 from flask import session
@@ -13,6 +13,23 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login', methods=['GET', 'POST'])
 @limiter.limit("5 per minute", methods=['POST'])
 def login():
+    # Check if user is already authenticated
+    if current_user.is_authenticated:
+        # Check if session is from current day
+        login_date = session.get('login_date')
+        today = get_gmt7_time().date()
+        
+        if login_date == today:
+            # Session is valid, redirect to appropriate dashboard
+            if current_user.role == 'admin_dinas':
+                return redirect(url_for('admin.dashboard'))
+            elif current_user.role == 'operator_kecamatan':
+                return redirect(url_for('operator.dashboard'))
+        else:
+            # Session expired, logout and continue to login
+            logout_user()
+            flash('Sesi Anda telah berakhir. Silakan login kembali.', 'info')
+    
     if request.method == 'POST':
         # Captcha Validation
         user_answer = request.form.get('captcha_answer', '')
@@ -33,6 +50,8 @@ def login():
         if user and check_password_hash(user.password_hash, password):
             # Check if password is same as username (needs change)
             if password == username:
+                # Store login date in session
+                session['login_date'] = get_gmt7_time().date()
                 login_user(user)
                 flash('Password Anda masih default. Silakan ubah password untuk melanjutkan.', 'warning')
                 return redirect(url_for('auth.change_password'))
@@ -40,7 +59,10 @@ def login():
             # Update last login
             user.last_login = get_gmt7_time()
             db.session.commit()
-            
+
+            # Store login date in session for daily expiration check
+            session['login_date'] = get_gmt7_time().date()
+
             login_user(user)
             flash('Login berhasil! Mengalihkan ke dashboard...', 'success')
 
