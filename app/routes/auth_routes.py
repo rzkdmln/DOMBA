@@ -25,8 +25,8 @@ def login():
         # Clear captcha after attempt
         session.pop('captcha_answer', None)
 
-        username = request.form.get('username', '')
-        password = request.form.get('password', '')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
 
         user = User.query.filter_by(username=username).first()
 
