@@ -791,12 +791,23 @@ def delete_user(user_id):
 def reset_password(user_id):
     user = User.query.get_or_404(user_id)
     
+    # Proteksi: Jangan izinkan reset jika username adalah administrator
+    if user.username == 'administrator':
+        return {
+            'success': False, 
+            'message': 'Gagal! Akun administrator utama tidak dapat direset demi keamanan.'
+        }, 403
+    
     from werkzeug.security import generate_password_hash
+    # Reset password menjadi sama dengan username
     user.password_hash = generate_password_hash(user.username, method='pbkdf2:sha256:600000')
     
     db.session.commit()
     
-    return {'success': True, 'message': f'Password untuk {user.username} berhasil direset ke username.'}
+    return {
+        'success': True, 
+        'message': f'Password untuk {user.username} berhasil direset ke username.'
+    }
 
 @admin_bp.route('/get_user_details/<int:user_id>')
 @login_required

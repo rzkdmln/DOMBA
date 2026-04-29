@@ -116,45 +116,54 @@
                         <td class="px-6 py-4">
                             <p class="text-sm text-slate-600">{{ user.last_login.strftime('%d %b %Y, %H:%M') if user.last_login else '-' }}</p>
                         </td>
-                        <td class="px-6 py-4">
-                            <div class="flex items-center justify-center space-x-2">
-                                <button 
-                                    data-id="{{ user.id }}" 
-                                    data-username="{{ user.username }}" 
-                                    data-nama="{{ user.nama_lengkap|default(user.username) }}" 
-                                    data-role="{{ user.role }}" 
-                                    data-created="{{ user.created_at.strftime('%d %b %Y') if user.created_at else '' }}" 
-                                    data-last-login="{{ user.last_login.strftime('%d %b %Y, %H:%M') if user.last_login else '' }}"
-                                    onclick="openViewModal(this)" 
-                                    class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" 
-                                    title="View Detail">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                                <button 
-                                    data-id="{{ user.id }}" 
-                                    data-username="{{ user.username }}" 
-                                    data-role="{{ user.role }}"
-                                    onclick="openEditModal(this)" 
-                                    class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
-                                    title="Edit">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
-                                <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus user {{ user.username }}?')">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Hapus">
-                                        <i class="fa-solid fa-trash-can"></i>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center space-x-2">
+                                    <button 
+                                        data-id="{{ user.id }}" 
+                                        data-username="{{ user.username }}" 
+                                        data-nama="{{ user.nama_lengkap|default(user.username) }}" 
+                                        data-role="{{ user.role }}" 
+                                        data-created="{{ user.created_at.strftime('%d %b %Y') if user.created_at else '' }}" 
+                                        data-last-login="{{ user.last_login.strftime('%d %b %Y, %H:%M') if user.last_login else '' }}"
+                                        onclick="openViewModal(this)" 
+                                        class="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all" 
+                                        title="View Detail">
+                                        <i class="fa-solid fa-eye"></i>
                                     </button>
-                                </form>
-                                <button 
-                                    data-id="{{ user.id }}" 
-                                    data-username="{{ user.username }}"
-                                    onclick="resetPassword(this)" 
-                                    class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" 
-                                    title="Reset Password">
-                                    <i class="fa-solid fa-key"></i>
-                                </button>
-                            </div>
-                        </td>
+
+                                    <button 
+                                        data-id="{{ user.id }}" 
+                                        data-username="{{ user.username }}" 
+                                        data-role="{{ user.role }}"
+                                        onclick="openEditModal(this)" 
+                                        class="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all" 
+                                        title="Edit">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+
+                                    <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus user {{ user.username }}?')">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all" title="Hapus">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </form>
+
+                                    {% if user.username != 'administrator' %}
+                                        <button 
+                                            data-id="{{ user.id }}" 
+                                            data-username="{{ user.username }}"
+                                            onclick="resetPassword(this)" 
+                                            class="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" 
+                                            title="Reset Password">
+                                            <i class="fa-solid fa-key"></i>
+                                        </button>
+                                    {% else %}
+                                        <span class="p-2 text-slate-200 cursor-not-allowed" title="Keamanan: Akun ini tidak dapat direset">
+                                            <i class="fa-solid fa-key"></i>
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </td>
                     </tr>
                     {% else %}
                     <tr>
