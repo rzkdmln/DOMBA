@@ -16,19 +16,19 @@
 <section class="hero-pattern relative min-h-screen flex items-center pt-20 overflow-hidden">
     <div class="container mx-auto px-6 relative z-10">
         <div class="max-w-4xl mx-auto text-center">
-            <h1 class="text-5xl md:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tighter">
+            <h1 class="text-2xl md:text-5xl lg:text-7xl font-black text-white mb-8 leading-[1.1] tracking-tighter">
                 <span class="block mt-8 mb-4">Info Stok</span>
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 py-2 block mb-4">Blangko KTP-el</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 py-2 block mb-4">Blangko KTP</span>
                 <span class="block">Jadi Lebih Transparan.</span>
             </h1>
             <p class="text-xl text-slate-400 mb-12 max-w-xl mx-auto leading-relaxed font-medium">
                 Pantau stok blangko KTP-el di seluruh titik layanan di Kabupaten Garut dengan data akurat dan real-time.
             </p>
-            <div class="flex flex-wrap gap-6 justify-center">
-                <a href="#data-stok" class="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-2xl shadow-blue-600/40 transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3">
+            <div class="flex gap-4 justify-center">
+                <a href="#data-stok" class="px-6 py-4 md:px-10 md:py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black shadow-2xl shadow-blue-600/40 transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 md:gap-3 text-sm md:text-base">
                     Lihat Data Stok <i class="fa-solid fa-arrow-right"></i>
                 </a>
-                <a href="#peta" class="px-10 py-5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold backdrop-blur-sm transition-all flex items-center gap-3">
+                <a href="#peta" class="px-6 py-4 md:px-10 md:py-5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl font-bold backdrop-blur-sm transition-all flex items-center gap-2 md:gap-3 text-sm md:text-base">
                     <i class="fa-solid fa-map"></i> Jelajahi Peta
                 </a>
             </div>
@@ -69,7 +69,7 @@
 <section id="data-stok" class="py-20 bg-slate-50 relative">
     <div class="container mx-auto px-6">
         <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8 mb-16">
             <div class="stats-card">
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-14 h-14 bg-blue-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg shadow-blue-600/30">
@@ -98,7 +98,7 @@
                 </div>
             </div>
 
-            <div class="stats-card lg:col-span-2 bg-blue-600 border-none group overflow-hidden">
+            <div class="stats-card col-span-2 md:col-span-2 lg:col-span-2 border-none group overflow-hidden bg-gradient-to-r from-blue-600 to-orange-400">
                 <!-- Background Decoration -->
                 <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 time-bg"></div>
                 
@@ -128,16 +128,16 @@
                     <p class="text-slate-400 font-medium">Yuk, cek titik layanan sesuai domisilimu di bawah ini:</p>
                 </div>
                 
-                <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full lg:w-auto h-full">
+                <div class="flex flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto h-full">
                     <div class="relative flex-grow lg:w-80">
                         <i class="fa-solid fa-magnifying-glass absolute left-5 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                        <input type="text" id="custom-search" placeholder="Cari kecamatan..." 
-                               class="w-full pl-14 pr-6 h-[60px] bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all shadow-inner font-bold text-slate-700">
+                        <input type="text" id="custom-search" placeholder="Cari..."
+                               class="w-full pl-14 pr-6 h-[50px] sm:h-[60px] bg-slate-50 border-none rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:bg-white transition-all shadow-inner font-bold text-slate-700 text-sm">
                     </div>
-                    <div class="flex items-center justify-center gap-3 bg-slate-50 rounded-2xl px-6 h-[60px] shadow-inner shrink-0">
-                        <span class="text-[0.6rem] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Baris:</span>
-                        <select id="custom-length" 
-                                class="bg-transparent border-none focus:ring-0 font-bold text-slate-700 cursor-pointer p-0">
+                    <div class="flex items-center justify-center gap-2 bg-slate-50 rounded-2xl px-4 sm:px-6 h-[50px] sm:h-[60px] shadow-inner shrink-0">
+                        <span class="text-[0.5rem] sm:text-[0.6rem] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Baris:</span>
+                        <select id="custom-length"
+                                class="bg-transparent border-none focus:ring-0 font-bold text-slate-700 cursor-pointer p-0 text-sm">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="-1">Semua</option>
