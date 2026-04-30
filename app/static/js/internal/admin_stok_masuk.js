@@ -179,41 +179,38 @@ function closeViewModal() {
 
 function viewDokumen(button) {
     const transaksiId = button.dataset.id;
-
+    
     fetch(`/admin/view_dokumen/${transaksiId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 const dokumenList = document.getElementById('dokumenList');
                 dokumenList.innerHTML = '';
-
+                
                 if (data.dokumen.length === 0) {
-                    dokumenList.innerHTML = '<p class="text-slate-400 text-sm italic">Tidak ada dokumen.</p>';
+                    dokumenList.innerHTML = '<p class="text-slate-500 text-center py-8">Tidak ada dokumen untuk transaksi ini.</p>';
                 } else {
                     data.dokumen.forEach(doc => {
                         const docItem = document.createElement('div');
-                        docItem.className = 'p-3 bg-slate-50 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors border-2 border-transparent hover:border-purple-200';
+                        docItem.className = 'flex items-center justify-between p-4 bg-slate-50 rounded-xl hover:bg-slate-100 transition-colors';
                         docItem.innerHTML = `
-                            <div class="flex items-center space-x-3">
-                                <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                    <i class="fa-solid fa-file-pdf text-purple-600 text-sm"></i>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                    <i class="fa-solid fa-file-pdf text-purple-600"></i>
                                 </div>
-                                <div class="flex-1 min-w-0">
-                                    <p class="font-semibold text-slate-800 text-sm truncate">${doc.nama_file}</p>
-                                    <p class="text-[0.65rem] text-slate-500">${doc.ukuran_file}</p>
+                                <div>
+                                    <p class="font-bold text-slate-800">${doc.nama_file}</p>
+                                    <p class="text-xs text-slate-500">${doc.ukuran_file} • ${doc.created_at}</p>
                                 </div>
                             </div>
+                            <a href="/admin/serve_dokumen/${doc.id}" target="_blank" class="px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
+                                <i class="fa-solid fa-eye mr-2"></i>Lihat
+                            </a>
                         `;
-                        docItem.onclick = () => previewPDF(doc.id, doc.nama_file);
                         dokumenList.appendChild(docItem);
                     });
                 }
-
-                // Reset preview area
-                document.getElementById('pdfPreviewFrame').classList.add('hidden');
-                document.getElementById('pdfPreviewArea').classList.remove('hidden');
-                document.getElementById('pdfPreviewHeader').classList.add('hidden');
-
+                
                 document.getElementById('dokumenModal').classList.remove('hidden');
             }
         })
@@ -223,30 +220,8 @@ function viewDokumen(button) {
         });
 }
 
-function previewPDF(docId, docName) {
-    const pdfPreviewFrame = document.getElementById('pdfPreviewFrame');
-    const pdfPreviewArea = document.getElementById('pdfPreviewArea');
-    const pdfPreviewHeader = document.getElementById('pdfPreviewHeader');
-    const pdfPreviewTitle = document.getElementById('pdfPreviewTitle');
-
-    // Show header with document name
-    pdfPreviewTitle.textContent = docName;
-    pdfPreviewHeader.classList.remove('hidden');
-
-    // Hide placeholder and show iframe
-    pdfPreviewArea.classList.add('hidden');
-    pdfPreviewFrame.classList.remove('hidden');
-
-    // Set iframe source to PDF
-    pdfPreviewFrame.src = `/admin/serve_dokumen/${docId}`;
-}
-
 function closeDokumenModal() {
     document.getElementById('dokumenModal').classList.add('hidden');
-    document.getElementById('pdfPreviewFrame').classList.add('hidden');
-    document.getElementById('pdfPreviewArea').classList.remove('hidden');
-    document.getElementById('pdfPreviewHeader').classList.add('hidden');
-    document.getElementById('pdfPreviewFrame').src = '';
 }
 
 function initSorting() {
