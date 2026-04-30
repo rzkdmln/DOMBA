@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak, BackupSchedule, BackupLog, DokumenTransaksi, StatusLayananLog
 from app.extensions import db
@@ -884,7 +884,7 @@ def stok_masuk():
                     return redirect(url_for('admin.stok_masuk'))
         
         # Create upload directory
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'stok_masuk',
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'stok_masuk',
                                   get_gmt7_time().strftime('%Y'),
                                   get_gmt7_time().strftime('%m'),
                                   str(transaksi.id))
@@ -1107,7 +1107,7 @@ def edit_stok_masuk():
         
         # Create upload directory if not exists
         now = get_gmt7_time()
-        upload_dir = os.path.join(app.root_path, 'static', 'uploads', 'stok_masuk', 
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads', 'stok_masuk',
                                     now.strftime('%Y'), now.strftime('%m'), str(transaksi_id))
         os.makedirs(upload_dir, exist_ok=True)
         
