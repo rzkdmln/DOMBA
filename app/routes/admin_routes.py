@@ -1,5 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify, current_app
 from flask_login import login_required, current_user
+import logging
+
+logger = logging.getLogger(__name__)
 from app.models import Kecamatan, Stok, Transaksi, User, DetailCetak, BackupSchedule, BackupLog, DokumenTransaksi, StatusLayananLog
 from app.extensions import db
 from sqlalchemy import func, or_
@@ -860,16 +863,20 @@ def stok_masuk():
         
         # 3. Handle File Uploads
         uploaded_files = request.files.getlist('dokumen')
+        logger.debug(f"Uploaded files: {len(uploaded_files)} files")
         total_size = 0
         max_total_size = 10 * 1024 * 1024  # 10MB
         
         for file in uploaded_files:
             if file and file.filename:
+                logger.debug(f"Processing file: {file.filename}")
                 # Check file type
                 allowed_extensions = {'pdf', 'jpg', 'jpeg', 'png'}
                 file_ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
-                
+                logger.debug(f"File extension: {file_ext}")
+
                 if file_ext not in allowed_extensions:
+                    logger.warning(f"File extension not allowed: {file_ext}")
                     flash(f'File {file.filename} tidak diizinkan. Hanya PDF, JPG, PNG.', 'danger')
                     db.session.rollback()
                     return redirect(url_for('admin.stok_masuk'))
@@ -888,13 +895,15 @@ def stok_masuk():
                                   get_gmt7_time().strftime('%Y'),
                                   get_gmt7_time().strftime('%m'),
                                   str(transaksi.id))
+        logger.debug(f"Upload directory: {upload_dir}")
         os.makedirs(upload_dir, exist_ok=True)
-        
+
         # Process and save files
         for file in uploaded_files:
             if file and file.filename:
                 filename = secure_filename(file.filename)
                 file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+                logger.debug(f"Secure filename: {filename}, extension: {file_ext}")
 
                 # Convert image to PDF if needed
                 if file_ext in ['jpg', 'jpeg', 'png']:
@@ -906,16 +915,21 @@ def stok_masuk():
 
                         pdf_filename = f"{os.path.splitext(filename)[0]}.pdf"
                         file_path = os.path.join(upload_dir, pdf_filename)
+                        logger.debug(f"Converting to PDF: {file_path}")
                         img.save(file_path, 'PDF', resolution=100.0)
                         file_ext = 'pdf'
                         filename = pdf_filename
+                        logger.debug(f"PDF saved successfully")
                     except Exception as e:
+                        logger.error(f"Failed to convert {filename} to PDF: {str(e)}")
                         flash(f'Gagal convert {filename} ke PDF: {str(e)}', 'danger')
                         continue
                 else:
                     # Save PDF as-is
                     file_path = os.path.join(upload_dir, filename)
+                    logger.debug(f"Saving PDF: {file_path}")
                     file.save(file_path)
+                    logger.debug(f"File saved successfully")
 
                 # Save to database
                 dokumen = DokumenTransaksi(
@@ -926,6 +940,7 @@ def stok_masuk():
                     ukuran_file=os.path.getsize(file_path)
                 )
                 db.session.add(dokumen)
+                logger.debug(f"Document added to database: transaksi_id={transaksi.id}, filename={filename}")
         
         db.session.commit()
         
