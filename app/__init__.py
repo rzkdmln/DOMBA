@@ -306,31 +306,49 @@ def create_app(config_class=Config):
         # sehingga migrasi gagal (mis. DuplicateColumn). Karena itu, kita skip di mode CLI migrasi.
         return len(sys.argv) >= 2 and sys.argv[1] == 'db'
 
-    # 4. Auto-initialization on startup (Disaster Recovery Protection)
+# 4. Auto-initialization on startup (Disaster Recovery Protection)
     if not _is_flask_db_command():
         with app.app_context():
+            # Tahap A: Pastikan Database siap dikoneksikan
+            try:
+                from sqlalchemy import text
+                db.session.execute(text("SELECT 1"))
+            except Exception as e:
+                print(f"\n[CRITICAL] Database not ready: {e}")
+                print("Initialization skipped. Check your database connection.\n")
+                return app # Berhenti di sini tapi tetap return app agar tidak crash total
+
+            # Tahap B: Menjalankan InitService (Seeding & Check)
             try:
                 from app.services.init_service import InitService
                 print("\n" + "="*70)
-                print("DOMBA Application Startup")
+                print("DOMBA - Dashboard Online Monitoring Blangko Adminduk Startup")
                 print("="*70)
                 
                 init_service = InitService(app, db)
                 init_result = init_service.run_initialization()
                 
-                for msg in init_result['messages']:
-                    print(f"  {msg}")
+                # Gunakan .get() agar aman jika dictionary key tidak ditemukan
+                messages = init_result.get('messages', [])
+                warnings = init_result.get('warnings', [])
+
+                for msg in messages:
+                    print(f"  [INFO] {msg}")
                 
-                if init_result['warnings']:
-                    for warn in init_result['warnings']:
-                        print(f"  {warn}")
+                if warnings:
+                    for warn in warnings:
+                        print(f"  [WARN] {warn}")
                 
                 print("="*70 + "\n")
                 
-                # Initialize scheduler for automated backups
-                _init_scheduler()
-            
             except Exception as e:
-                print(f"Warning during auto-initialization: {e}")
+                # Jika InitService gagal (misal data duplikat), log error tapi jangan hentikan aplikasi
+                print(f"[ERROR] Logic error during InitService: {e}")
+
+            # Tahap C: Jalankan Scheduler (Terpisah agar kegagalan seeding tidak mematikan backup)
+            try:
+                _init_scheduler()
+            except Exception as e:
+                print(f"[ERROR] Failed to start background scheduler: {e}")
 
     return app
